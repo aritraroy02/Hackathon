@@ -1,26 +1,10 @@
 import React, { useState } from 'react';
-import {   
-  View,
-  Text,
-  TextInput,
-  Button,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  Image, } from 'react-native';
+import { View, Text, TextInput, Button, ScrollView, StyleSheet, Image, TouchableOpacity, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import RNPickerSelect from 'react-native-picker-select';
 
 export default function SignupScreen() {
   const [step, setStep] = useState(1);
-    const [showPicker, setShowPicker] = useState(false);
-  const [weightUnit, setWeightUnit] = useState('kg');
-  const [heightUnit, setHeightUnit] = useState('cm');
-  const [feet, setFeet] = useState('');
-  const [inches, setInches] = useState('');
   const [formData, setFormData] = useState({
     childName: '',
     dob: '',
@@ -66,13 +50,6 @@ export default function SignupScreen() {
       const iso = selectedDate.toISOString().split('T')[0];
       handleChange('dob', iso);
     }
-  };
-    const convertWeight = (value, toUnit) => {
-    const num = parseFloat(value);
-    if (isNaN(num)) return '';
-    if (toUnit === 'kg') return (num / 2.20462).toFixed(2);
-    if (toUnit === 'lb') return (num * 2.20462).toFixed(2);
-    return value;
   };
 
   return (
@@ -121,29 +98,13 @@ export default function SignupScreen() {
             />
           )}
 
-          <View style={styles.weightRow}>
-            <TextInput
-              placeholder="Weight"
-              style={[styles.input, styles.weightInput]}
-              keyboardType="numeric"
-              value={formData.weight}
-              onChangeText={(text) => handleChange('weight', text)}
-            />
-            <RNPickerSelect
-              onValueChange={handleUnitChange}
-              value={weightUnit}
-              items={[
-                { label: 'kg', value: 'kg' },
-                { label: 'lb', value: 'lb' },
-              ]}
-              style={{
-                inputIOS: styles.unitPicker,
-                inputAndroid: styles.unitPicker,
-              }}
-              useNativeAndroidPickerStyle={false}
-              placeholder={{}}
-            />
-          </View>
+          <TextInput
+            placeholder="Weight (kg)"
+            style={styles.input}
+            keyboardType="numeric"
+            onChangeText={(text) => handleChange('weight', text)}
+            value={formData.weight}
+          />
           <TextInput
             placeholder="Height (cm)"
             style={styles.input}
