@@ -169,7 +169,7 @@ export default function SignupScreen() {
             <Button
               title={formData.childImage ? 'Change Photo' : 'Upload Child Photo'}
               onPress={handlePickImage}
-              color="#4A7C59"
+              color="#05ff50ff"
             />
           </View>
 
@@ -518,6 +518,7 @@ const styles = StyleSheet.create({
     color: 'green',
     marginBottom: 20,
     alignItems: 'center',
+
   },
   childImagePreview: {
     width: 100,
