@@ -24,6 +24,7 @@ export default function SignupScreen() {
   const [feet, setFeet] = useState('');
   const [inches, setInches] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [aadharError, setAadharError] = useState('');
 
   const [formData, setFormData] = useState({
     childName: '',
@@ -337,7 +338,26 @@ export default function SignupScreen() {
           ) : null}
 
 
-          <TextInput placeholder="Aadhar Card No." style={styles.input} keyboardType="numeric" onChangeText={(text) => handleChange('aadhar', text)} />
+          <TextInput
+            placeholder="Aadhar Card No. (XXXX XXXX XXXX)"
+            style={styles.input}
+            keyboardType="numeric"
+            maxLength={14}
+            value={formData.aadhar}
+            onChangeText={(text) => {
+              const cleaned = text.replace(/\D/g, '');
+              let formatted = cleaned.match(/.{1,4}/g)?.join(' ') || '';
+              handleChange('aadhar', formatted);
+              if (formatted.length === 14 && /^\d{4} \d{4} \d{4}$/.test(formatted)) {
+                setAadharError('');
+              } else {
+                setAadharError('Aadhar must be 12 digits in XXXX XXXX XXXX format');
+              }
+            }}
+          />
+          {aadharError ? (
+            <Text style={styles.errorText}>{aadharError}</Text>
+          ) : null}         
           <TextInput placeholder="Signs of Malnutrition" style={styles.input} onChangeText={(text) => handleChange('malnutritionSign', text)} />
           <TextInput placeholder="Recent Illnesses" style={styles.input} onChangeText={(text) => handleChange('illnesses', text)} />
           <View style={styles.nav}>
@@ -352,9 +372,17 @@ export default function SignupScreen() {
           <Text style={styles.heading}>Step 3: Create Account</Text>
           <TextInput placeholder="Create User ID" style={styles.input} onChangeText={(text) => handleChange('userId', text)} />
           <TextInput placeholder="Create Password" style={styles.input} secureTextEntry onChangeText={(text) => handleChange('password', text)} />
-          <TouchableOpacity onPress={() => handleChange('parentConsent', !formData.parentConsent)} style={styles.checkbox}>
-            <Text style={{ color: '#fff' }}>{formData.parentConsent ? '✅' : '⬜'} Parent Consent</Text>
-          </TouchableOpacity>
+          <TouchableOpacity
+                style={styles.consentContainer}
+                onPress={() => handleChange('parentConsent', !formData.parentConsent)}
+              >
+                <View style={[styles.checkbox, formData.parentConsent && styles.checkboxChecked]}>
+                  {formData.parentConsent && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text style={styles.consentText}>
+                  I give my consent for my child's information to be registered and used for health monitoring purposes.
+                </Text>
+              </TouchableOpacity>
           <View style={styles.nav}>
             <Button title="Back" onPress={handleBack} />
             <Button title="Review & Submit" onPress={handleNext} />
