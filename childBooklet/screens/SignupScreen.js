@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,71 +10,146 @@ import {
   TouchableOpacity,
   Platform,
   Image,
+  Switch,
+  Share,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import RNPickerSelect from 'react-native-picker-select';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
-export default function SignupScreen() {
+export default function SignupScreen({ navigation }) {
+  // Network connectivity state
+  const [isConnected, setIsConnected] = useState(true);
+  const [pendingRecords, setPendingRecords] = useState([]);
+  const [showUploadPrompt, setShowUploadPrompt] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  // Form state
   const [step, setStep] = useState(1);
-  const [dobDate, setDobDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [dobDate, setDobDate] = useState(new Date());
   const [weightUnit, setWeightUnit] = useState('kg');
   const [heightUnit, setHeightUnit] = useState('cm');
   const [feet, setFeet] = useState('');
   const [inches, setInches] = useState('');
+  const [errors, setErrors] = useState({});
   const [phoneError, setPhoneError] = useState('');
   const [aadharError, setAadharError] = useState('');
-
-  const [formData, setFormData] = useState({
-    childFirstName: '',
-    childLastName: '',
-    dob: '',
-    weight: '',
-    height: '',
-    parentName: '',
-    relation: '',
-    aadhar: '',
-    malnutritionSign: '',
-    illnesses: '',
-    userId: '',
-    password: '',
-    gender: '',
-    parentConsent: false,
-    childImage: null,
-    countryCode: '+91',
-    phone: '',
-  });
-
   const [customRelation, setCustomRelation] = useState('');
 
-  const handleChange = (key, value) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-  };
+  const [formData, setFormData] = useState({
+    childName: '',
+    facePhoto: null,
+    age: '',
+    localId: '',
+    idType: '',
+    aadharNumber: '',
+    weight: '',
+    height: '',
+    guardianName: '',
+    malnutritionSigns: '',
+    recentIllnesses: '',
+    parentsConsent: false,
+    skipMalnutrition: false,
+    skipIllnesses: false,
+    dateCollected: new Date().toISOString(),
+    healthId: '',
+    isOffline: false,
+  });
 
-  const handleNext = () => {
-    if (step === 2 && formData.relation === 'Other' && customRelation) {
-      handleChange('relation', customRelation);
+  // Network connectivity monitoring
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const wasOffline = !isConnected;
+      setIsConnected(state.isConnected);
+      
+      // If we just came back online, check for pending records
+      if (wasOffline && state.isConnected) {
+        checkPendingRecords();
+      }
+    });
+
+    // Initial check
+    checkPendingRecords();
+
+    return () => unsubscribe();
+  }, [isConnected]);
+
+  const checkPendingRecords = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('pendingChildRecords');
+      if (stored) {
+        const records = JSON.parse(stored);
+        setPendingRecords(records);
+        if (records.length > 0 && isConnected) {
+          setShowUploadPrompt(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking pending records:', error);
     }
-    if (step < 5) setStep(step + 1);
   };
 
-  const handleBack = () => {
-    if (step > 1) setStep(step - 1);
+  const generateHealthId = () => {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `CHB${timestamp.slice(-6)}${random.toUpperCase()}`;
   };
 
-  const handleSubmit = () => {
-    Alert.alert('Success', `Your Unique ID: XYZ1234\nPassword: ${formData.password}`);
-    setStep(5);
+  const generateLocalId = () => {
+    const timestamp = Date.now().toString();
+    return `LOC${timestamp.slice(-6)}`;
   };
 
-  const handlePickImage = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert('Permission needed', 'Enable photo access to upload image.');
+  const handleChange = (key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+    // Clear error when user starts typing
+    if (errors[key]) {
+      setErrors(prev => ({ ...prev, [key]: null }));
+    }
+  };
+
+  const handleImagePicker = async () => {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (!permissionResult.granted) {
+      Alert.alert('Permission Required', 'Please grant camera/photo library access to capture child photos.');
       return;
     }
 
+    Alert.alert(
+      'Select Photo',
+      'Choose how you would like to add the child\'s photo',
+      [
+        { text: 'Camera', onPress: openCamera },
+        { text: 'Photo Library', onPress: openImageLibrary },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const openCamera = async () => {
+    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!cameraPermission.granted) {
+      Alert.alert('Permission Required', 'Please grant camera access to take photos.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      handleChange('facePhoto', result.assets[0].uri);
+    }
+  };
+
+  const openImageLibrary = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -83,8 +158,7 @@ export default function SignupScreen() {
     });
 
     if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      handleChange('childImage', uri);
+      handleChange('facePhoto', result.assets[0].uri);
     }
   };
 
@@ -121,6 +195,187 @@ export default function SignupScreen() {
     setHeightUnit(unit);
   };
 
+  const handleNext = () => {
+    if (step === 2 && formData.relation === 'Other' && customRelation) {
+      handleChange('relation', customRelation);
+    }
+    if (step < 4) setStep(step + 1);
+  };
+
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.childName.trim()) {
+      newErrors.childName = 'Child name is required';
+    }
+
+    if (!formData.guardianName.trim()) {
+      newErrors.guardianName = 'Guardian name is required';
+    }
+
+    if (!formData.parentsConsent) {
+      newErrors.parentsConsent = 'Parental consent is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const saveRecordOffline = async (record) => {
+    try {
+      const stored = await AsyncStorage.getItem('pendingChildRecords');
+      const existingRecords = stored ? JSON.parse(stored) : [];
+      
+      const updatedRecords = [...existingRecords, record];
+      await AsyncStorage.setItem('pendingChildRecords', JSON.stringify(updatedRecords));
+      
+      setPendingRecords(updatedRecords);
+      return true;
+    } catch (error) {
+      console.error('Error saving offline record:', error);
+      return false;
+    }
+  };
+
+  const shareHealthId = async (healthId) => {
+    try {
+      await Share.share({
+        title: 'Child Health ID',
+        message: `Child Health ID: ${healthId}\n\nPlease keep this ID safe for future healthcare visits and reference.`,
+      });
+    } catch (error) {
+      console.error('Error sharing Health ID:', error);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      Alert.alert('Validation Error', 'Please fix the errors in the form before submitting.');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const healthId = generateHealthId();
+      const localId = formData.localId || generateLocalId();
+      
+      const record = {
+        ...formData,
+        healthId,
+        localId,
+        dateCollected: new Date().toISOString(),
+        isOffline: !isConnected,
+      };
+
+      // Update formData with the generated healthId and localId
+      setFormData(prevData => ({
+        ...prevData,
+        healthId,
+        localId,
+        dateCollected: new Date().toISOString(),
+        isOffline: !isConnected,
+      }));
+
+      if (isConnected) {
+        // TODO: Implement API call to save online
+        console.log('Saving online:', record);
+        Alert.alert(
+          'Success',
+          `Child record saved successfully!\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`,
+          [
+            {
+              text: 'Share Health ID',
+              onPress: () => shareHealthId(healthId),
+            },
+            {
+              text: 'Continue',
+              onPress: () => setStep(4),
+            },
+          ]
+        );
+      } else {
+        // Save offline
+        const saved = await saveRecordOffline(record);
+        if (saved) {
+          Alert.alert(
+            'Saved Offline',
+            `Child record saved locally!\n\nHealth ID: ${healthId}\n\nThe record will be uploaded when internet connection is restored.\n\nPlease share this Health ID with the child's family for future reference.`,
+            [
+              {
+                text: 'Share Health ID',
+                onPress: () => shareHealthId(healthId),
+              },
+              {
+                text: 'Continue',
+                onPress: () => setStep(4),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to save record. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving record:', error);
+      Alert.alert('Error', 'An error occurred while saving the record. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const uploadPendingRecords = async () => {
+    try {
+      // TODO: Implement API calls to upload pending records
+      console.log('Uploading pending records:', pendingRecords);
+      
+      // Simulate upload process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Clear pending records after successful upload
+      await AsyncStorage.removeItem('pendingChildRecords');
+      setPendingRecords([]);
+      setShowUploadPrompt(false);
+      
+      Alert.alert('Success', `${pendingRecords.length} record(s) uploaded successfully!`);
+    } catch (error) {
+      console.error('Error uploading records:', error);
+      Alert.alert('Upload Error', 'Failed to upload some records. Please try again.');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      childName: '',
+      facePhoto: null,
+      age: '',
+      localId: '',
+      idType: '',
+      aadharNumber: '',
+      weight: '',
+      height: '',
+      guardianName: '',
+      malnutritionSigns: '',
+      recentIllnesses: '',
+      parentsConsent: false,
+      skipMalnutrition: false,
+      skipIllnesses: false,
+      dateCollected: new Date().toISOString(),
+      healthId: '',
+      isOffline: false,
+    });
+    setErrors({});
+    setStep(1);
+    setFeet('');
+    setInches('');
+    setCustomRelation('');
+    setPhoneError('');
+  };
+
   const reviewEntries = Object.entries({
     ...formData,
     childName: `${formData.childFirstName} ${formData.childLastName}`.trim(),
@@ -132,19 +387,15 @@ export default function SignupScreen() {
         <>
           <Text style={styles.heading}>Step 1: Child Info</Text>
 
-          <View style={styles.nameRow}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Child's Full Name</Text>
             <TextInput
-              placeholder="First Name"
-              style={[styles.input, styles.halfInput, { marginRight: 8 }]}
-              value={formData.childFirstName}
-              onChangeText={(text) => handleChange('childFirstName', text)}
+              placeholder="Enter child's full name"
+              style={[styles.input, errors.childName && styles.inputError]}
+              value={formData.childName}
+              onChangeText={(text) => handleChange('childName', text)}
             />
-            <TextInput
-              placeholder="Last Name"
-              style={[styles.input, styles.halfInput]}
-              value={formData.childLastName}
-              onChangeText={(text) => handleChange('childLastName', text)}
-            />
+            {errors.childName && <Text style={styles.errorText}>{errors.childName}</Text>}
           </View>
 
           <RNPickerSelect
@@ -163,39 +414,76 @@ export default function SignupScreen() {
           />
 
           <View style={styles.imageUploadBox}>
-            {formData.childImage && (
-              <Image source={{ uri: formData.childImage }} style={styles.childImagePreview} />
+            {formData.facePhoto && (
+              <Image source={{ uri: formData.facePhoto }} style={styles.childImagePreview} />
             )}
+<<<<<<< Updated upstream
             <Button
               title={formData.childImage ? 'Change Photo' : 'Upload Child Photo'}
               onPress={handlePickImage}
               color="#05ff50ff"
             />
+=======
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleImagePicker}
+            >
+              <Text style={styles.uploadButtonText}>
+                {formData.facePhoto ? 'Change Photo' : 'Upload Child Photo'}
+              </Text>
+            </TouchableOpacity>
+>>>>>>> Stashed changes
           </View>
 
-          <TouchableOpacity
-            onPress={() => setShowPicker(true)}
-            style={[styles.input, { justifyContent: 'center' }]}
-          >
-            <Text style={{ color: '#000' }}>{formData.dob || 'Select DOB'}</Text>
-          </TouchableOpacity>
-
-          {showPicker && (
-            <DateTimePicker
-              value={dobDate}
-              mode="date"
-              display="default"
-              maximumDate={new Date()}
-              onChange={(event, selectedDate) => {
-                setShowPicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  const formatted = selectedDate.toISOString().split('T')[0];
-                  setDobDate(selectedDate);
-                  handleChange('dob', formatted);
+          <TextInput
+            placeholder="Age (in years)"
+            style={styles.input}
+            keyboardType="numeric"
+            value={formData.age}
+            onChangeText={(text) => handleChange('age', text)}
+          />
+          
+          <RNPickerSelect
+            onValueChange={(value) => handleChange('idType', value)}
+            value={formData.idType}
+            items={[
+              { label: 'Local ID', value: 'local' },
+              { label: 'Aadhar Card', value: 'aadhar' },
+            ]}
+            placeholder={{ label: 'Select ID Type (optional)', value: '' }}
+            style={{
+              inputIOS: styles.input,
+              inputAndroid: styles.input,
+            }}
+            useNativeAndroidPickerStyle={false}
+          />
+          
+          {formData.idType === 'local' && (
+            <TextInput
+              placeholder="Enter Local ID"
+              style={styles.input}
+              value={formData.localId}
+              onChangeText={(text) => handleChange('localId', text)}
+            />
+          )}
+          
+          {formData.idType === 'aadhar' && (
+            <TextInput
+              placeholder="Aadhar Card No. (XXXX XXXX XXXX)"
+              style={styles.input}
+              keyboardType="numeric"
+              maxLength={14}
+              value={formData.aadharNumber}
+              onChangeText={(text) => {
+                const cleaned = text.replace(/\D/g, '');
+                let formatted = cleaned.match(/.{1,4}/g)?.join(' ') || '';
+                if (formatted.length <= 14) {
+                  handleChange('aadharNumber', formatted);
                 }
               }}
             />
           )}
+
 
           <View style={styles.weightRow}>
             <TextInput
@@ -282,7 +570,7 @@ export default function SignupScreen() {
       {step === 2 && (
         <>
           <Text style={styles.heading}>Step 2: Parent Info</Text>
-          <TextInput placeholder="Parent Name" style={styles.input} onChangeText={(text) => handleChange('parentName', text)} />
+          <TextInput placeholder="Parent/Guardian Name" style={styles.input} onChangeText={(text) => handleChange('guardianName', text)} />
 
           {/* Relation Dropdown */}
           <RNPickerSelect
@@ -353,77 +641,81 @@ export default function SignupScreen() {
           ) : null}
 
 
-          <TextInput
-            placeholder="Aadhar Card No. (XXXX XXXX XXXX)"
-            style={styles.input}
-            keyboardType="numeric"
-            maxLength={14}
-            value={formData.aadhar}
-            onChangeText={(text) => {
-              const cleaned = text.replace(/\D/g, '');
-              let formatted = cleaned.match(/.{1,4}/g)?.join(' ') || '';
-              handleChange('aadhar', formatted);
-              if (formatted.length === 14 && /^\d{4} \d{4} \d{4}$/.test(formatted)) {
-                setAadharError('');
-              } else {
-                setAadharError('Aadhar must be 12 digits in XXXX XXXX XXXX format');
-              }
-            }}
-          />
-          {aadharError ? (
-            <Text style={styles.errorText}>{aadharError}</Text>
-          ) : null}         
-          <TextInput placeholder="Signs of Malnutrition" style={styles.input} onChangeText={(text) => handleChange('malnutritionSign', text)} />
-          <TextInput placeholder="Recent Illnesses" style={styles.input} onChangeText={(text) => handleChange('illnesses', text)} />
+          
+          {/* Malnutrition Signs */}
+          <View style={styles.inputContainer}>
+            <View style={styles.skipContainerRight}>
+              <Text style={styles.skipText}>Skip Malnutrition Signs</Text>
+              <Switch
+                value={formData.skipMalnutrition}
+                onValueChange={(value) => {
+                  handleChange('skipMalnutrition', value);
+                  if (value) handleChange('malnutritionSigns', 'N/A');
+                }}
+              />
+            </View>
+            {!formData.skipMalnutrition && (
+              <TextInput
+                placeholder="Describe any visible signs of malnutrition"
+                style={[styles.input, styles.textArea]}
+                value={formData.malnutritionSigns}
+                onChangeText={(text) => handleChange('malnutritionSigns', text)}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            )}
+            {formData.skipMalnutrition && (
+              <View style={styles.skippedField}>
+                <Text style={styles.skippedText}>N/A</Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Recent Illnesses */}
+          <View style={styles.inputContainer}>
+            <View style={styles.skipContainerRight}>
+              <Text style={styles.skipText}>Skip Recent Illnesses</Text>
+              <Switch
+                value={formData.skipIllnesses}
+                onValueChange={(value) => {
+                  handleChange('skipIllnesses', value);
+                  if (value) handleChange('recentIllnesses', 'N/A');
+                }}
+              />
+            </View>
+            {!formData.skipIllnesses && (
+              <TextInput
+                placeholder="Describe any recent illnesses or health issues"
+                style={[styles.input, styles.textArea]}
+                value={formData.recentIllnesses}
+                onChangeText={(text) => handleChange('recentIllnesses', text)}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            )}
+            {formData.skipIllnesses && (
+              <View style={styles.skippedField}>
+                <Text style={styles.skippedText}>N/A</Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Consent Checkbox */}
+          <TouchableOpacity
+            style={styles.consentContainer}
+            onPress={() => handleChange('parentsConsent', !formData.parentsConsent)}
+          >
+            <View style={[styles.checkbox, formData.parentsConsent && styles.checkboxChecked]}>
+              {formData.parentsConsent && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.consentText}>
+              I give my consent for my child's information to be registered and used for health monitoring purposes.
+            </Text>
+          </TouchableOpacity>
+          
           <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                  <Text style={styles.backButtonText}>← Back</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                  <Text style={styles.nextButtonText}>Next →</Text>
-                </TouchableOpacity>
-              </View>
-        </>
-      )}
-
-      {step === 3 && (
-            <View style={styles.stepContainer}>
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Create User ID *</Text>
-                <TextInput
-                  placeholder="Choose a unique user ID"
-                  style={styles.input}
-                  value={formData.userId}
-                  onChangeText={(text) => handleChange('userId', text)}
-                  placeholderTextColor="#8B9A8B"
-                />
-              </View>
-
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Create Password *</Text>
-                <TextInput
-                  placeholder="Choose a strong password"
-                  style={styles.input}
-                  secureTextEntry
-                  value={formData.password}
-                  onChangeText={(text) => handleChange('password', text)}
-                  placeholderTextColor="#8B9A8B"
-                />
-              </View>
-
-              <TouchableOpacity
-                style={styles.consentContainer}
-                onPress={() => handleChange('parentConsent', !formData.parentConsent)}
-              >
-                <View style={[styles.checkbox, formData.parentConsent && styles.checkboxChecked]}>
-                  {formData.parentConsent && <Text style={styles.checkmark}>✓</Text>}
-                </View>
-                <Text style={styles.consentText}>
-                  I give my consent for my child's information to be registered and used for health monitoring purposes.
-                </Text>
-              </TouchableOpacity>
-
-              <View style={styles.buttonRow}>
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                   <Text style={styles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
@@ -431,9 +723,10 @@ export default function SignupScreen() {
                   <Text style={styles.nextButtonText}>Review →</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
-      {step === 4 && (
+        </>
+      )}
+
+      {step === 3 && (
         <>
           <Text style={styles.heading}>Overview</Text>
           {reviewEntries.map(([key, value]) => (
@@ -445,9 +738,9 @@ export default function SignupScreen() {
                   <Text style={styles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
-                  style={[styles.submitButton, !formData.parentConsent && styles.submitButtonDisabled]} 
+                  style={[styles.submitButton, !formData.parentsConsent && styles.submitButtonDisabled]} 
                   onPress={handleSubmit}
-                  disabled={!formData.parentConsent}
+                  disabled={!formData.parentsConsent}
                 >
                   <Text style={styles.submitButtonText}>Submit Registration</Text>
                 </TouchableOpacity>
@@ -455,11 +748,40 @@ export default function SignupScreen() {
         </>
       )}
 
-      {step === 5 && (
+      {step === 4 && (
         <View style={styles.successBox}>
           <Text style={styles.successText}>✅ SUCCESS</Text>
-          <Text style={styles.overviewText}>Your Unique ID: XYZ1234</Text>
-          <Text style={styles.overviewText}>Your password: {formData.password}</Text>
+          <Text style={styles.overviewText}>Registration completed successfully!</Text>
+          
+          {/* Health ID Display */}
+          <View style={styles.healthIdContainer}>
+            <Text style={styles.healthIdLabel}>Health ID:</Text>
+            <Text style={styles.healthIdText}>{formData.healthId}</Text>
+            <Text style={styles.healthIdNote}>Please save this ID for future reference</Text>
+          </View>
+          
+          <View style={styles.successActions}>
+            <TouchableOpacity
+              style={styles.shareHealthIdButton}
+              onPress={() => shareHealthId(formData.healthId)}
+            >
+              <Text style={styles.shareHealthIdButtonText}>📤 Share Health ID</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.dataExportButton}
+              onPress={() => navigation.navigate('DataExport', { userData: formData })}
+            >
+              <Text style={styles.dataExportButtonText}>📊 Export/Share Data</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.continueButton}
+              onPress={() => navigation.navigate('Login')}
+            >
+              <Text style={styles.continueButtonText}>Continue to Login</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </ScrollView>
@@ -659,6 +981,164 @@ const styles = StyleSheet.create({
       backgroundColor: '#FFFFFF',
   },
   uploadButton: {
-    Color: '#4A7C59',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#4A7C59',
+    shadowColor: '#4A7C59',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  },);
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  stepContainer: {
+    flex: 1,
+  },
+  inputContainer: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D5016',
+    marginBottom: 8,
+  },
+  consentContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginVertical: 20,
+  },
+  successActions: {
+    marginTop: 20,
+    width: '100%',
+  },
+  dataExportButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF9500',
+    marginBottom: 12,
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  dataExportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  continueButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#4A7C59',
+    shadowColor: '#4A7C59',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  skipContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  skipText: {
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#2D5016',
+    fontWeight: '500',
+  },
+  skipContainerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingVertical: 8,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: 12,
+  },
+  inputError: {
+    borderColor: '#FF3B30',
+    borderWidth: 2,
+  },
+  skippedField: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  skippedText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  healthIdContainer: {
+    backgroundColor: '#E8F5E8',
+    padding: 16,
+    borderRadius: 12,
+    marginVertical: 16,
+    borderWidth: 2,
+    borderColor: '#4A7C59',
+    alignItems: 'center',
+  },
+  healthIdLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2D5016',
+    marginBottom: 8,
+  },
+  healthIdText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4A7C59',
+    marginBottom: 8,
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  healthIdNote: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  shareHealthIdButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    marginBottom: 12,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  shareHealthIdButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
