@@ -23,6 +23,7 @@ export default function SignupScreen() {
   const [heightUnit, setHeightUnit] = useState('cm');
   const [feet, setFeet] = useState('');
   const [inches, setInches] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const [formData, setFormData] = useState({
     childName: '',
@@ -39,6 +40,8 @@ export default function SignupScreen() {
     gender: '',
     parentConsent: false,
     childImage: null,
+    countryCode: '+91',
+    phone: '',
   });
 
   const [customRelation, setCustomRelation] = useState('');
@@ -296,6 +299,44 @@ export default function SignupScreen() {
             />
           )}
 
+          {/* Phone Number with Country Code */}
+          <View style={styles.phoneRow}>
+            <RNPickerSelect
+              onValueChange={(value) => handleChange('countryCode', value)}
+              value={formData.countryCode}
+              items={[
+                { label: '+91 (India)', value: '+91' },
+              ]}
+              style={{
+                inputIOS: styles.countryPicker,
+                inputAndroid: styles.countryPicker,
+              }}
+              useNativeAndroidPickerStyle={false}
+              placeholder={{}}
+            />
+
+            <TextInput
+              placeholder="Phone Number"
+              style={[styles.input, { flex: 1 }]}
+              keyboardType="numeric"
+              maxLength={10}
+              value={formData.phone}
+              onChangeText={(text) => {
+                handleChange('phone', text);
+                if (/^\d{10}$/.test(text)) {
+                  setPhoneError('');
+                } else {
+                  setPhoneError('Phone number must be 10 digits');
+                }
+              }}
+            />
+          </View>
+
+          {phoneError ? (
+            <Text style={styles.errorText}>{phoneError}</Text>
+          ) : null}
+
+
           <TextInput placeholder="Aadhar Card No." style={styles.input} keyboardType="numeric" onChangeText={(text) => handleChange('aadhar', text)} />
           <TextInput placeholder="Signs of Malnutrition" style={styles.input} onChangeText={(text) => handleChange('malnutritionSign', text)} />
           <TextInput placeholder="Recent Illnesses" style={styles.input} onChangeText={(text) => handleChange('illnesses', text)} />
@@ -430,4 +471,26 @@ const styles = StyleSheet.create({
     color: 'lime',
     marginBottom: 12,
   },
+  phoneRow: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 12,
+  },
+
+  countryPicker: {
+    marginRight: 10,
+    marginBottom: 12,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    borderColor: '#888',
+    borderWidth: 1,
+  },
+
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 8,
+    marginLeft: 5,
+  }
 });
