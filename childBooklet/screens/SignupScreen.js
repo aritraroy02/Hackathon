@@ -27,7 +27,8 @@ export default function SignupScreen() {
   const [aadharError, setAadharError] = useState('');
 
   const [formData, setFormData] = useState({
-    childName: '',
+    childFirstName: '',
+    childLastName: '',
     dob: '',
     weight: '',
     height: '',
@@ -120,7 +121,10 @@ export default function SignupScreen() {
     setHeightUnit(unit);
   };
 
-  const reviewEntries = Object.entries(formData).filter(([k]) => k !== 'childImage');
+  const reviewEntries = Object.entries({
+    ...formData,
+    childName: `${formData.childFirstName} ${formData.childLastName}`.trim(),
+  }).filter(([k]) => !['childFirstName', 'childLastName', 'childImage'].includes(k));
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -128,13 +132,22 @@ export default function SignupScreen() {
         <>
           <Text style={styles.heading}>Step 1: Child Info</Text>
 
-          <TextInput
-            placeholder="Child Name"
-            style={styles.input}
-            onChangeText={(text) => handleChange('childName', text)}
-          />
+          <View style={styles.nameRow}>
+            <TextInput
+              placeholder="First Name"
+              style={[styles.input, styles.halfInput, { marginRight: 8 }]}
+              value={formData.childFirstName}
+              onChangeText={(text) => handleChange('childFirstName', text)}
+            />
+            <TextInput
+              placeholder="Last Name"
+              style={[styles.input, styles.halfInput]}
+              value={formData.childLastName}
+              onChangeText={(text) => handleChange('childLastName', text)}
+            />
+          </View>
 
-           <RNPickerSelect
+          <RNPickerSelect
             onValueChange={(value) => handleChange('gender', value)}
             value={formData.gender}
             items={[
@@ -147,8 +160,8 @@ export default function SignupScreen() {
               inputAndroid: styles.input,
             }}
             useNativeAndroidPickerStyle={false}
-            />
-  
+          />
+
           <View style={styles.imageUploadBox}>
             {formData.childImage && (
               <Image source={{ uri: formData.childImage }} style={styles.childImagePreview} />
@@ -156,6 +169,7 @@ export default function SignupScreen() {
             <Button
               title={formData.childImage ? 'Change Photo' : 'Upload Child Photo'}
               onPress={handlePickImage}
+              color="#4A7C59"
             />
           </View>
 
@@ -257,13 +271,13 @@ export default function SignupScreen() {
               placeholder={{}}
             />
           </View>
+
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                <Text style={styles.nextButtonText}>Next →</Text>
-              </TouchableOpacity>
-          
+            <Text style={styles.nextButtonText}>Next →</Text>
+          </TouchableOpacity>
         </>
-        
       )}
+
 
       {step === 2 && (
         <>
@@ -473,6 +487,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderColor: '#888',
     borderWidth: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  halfInput: {
+    flex: 1,
   },
   weightRow: {
     flexDirection: 'row',
