@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "expo": "^48.0.21",
-    "expo-cli": "^6.3.10",
-    "react-native": "0.71.14",
-    "react-native-picker-select": "^9.3.1"
-  }
-}
