@@ -52,11 +52,9 @@ export default function SignupScreen() {
   };
 
   const handleNext = () => {
-    // Use customRelation if 'Other' was selected
     if (step === 2 && formData.relation === 'Other' && customRelation) {
       handleChange('relation', customRelation);
     }
-
     if (step < 5) setStep(step + 1);
   };
 
@@ -259,9 +257,12 @@ export default function SignupScreen() {
               placeholder={{}}
             />
           </View>
-
-          <Button title="Next" onPress={handleNext} />
+          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                <Text style={styles.nextButtonText}>Next →</Text>
+              </TouchableOpacity>
+          
         </>
+        
       )}
 
       {step === 2 && (
@@ -360,19 +361,43 @@ export default function SignupScreen() {
           ) : null}         
           <TextInput placeholder="Signs of Malnutrition" style={styles.input} onChangeText={(text) => handleChange('malnutritionSign', text)} />
           <TextInput placeholder="Recent Illnesses" style={styles.input} onChangeText={(text) => handleChange('illnesses', text)} />
-          <View style={styles.nav}>
-            <Button title="Back" onPress={handleBack} />
-            <Button title="Next" onPress={handleNext} />
-          </View>
+          <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                  <Text style={styles.nextButtonText}>Next →</Text>
+                </TouchableOpacity>
+              </View>
         </>
       )}
 
       {step === 3 && (
-        <>
-          <Text style={styles.heading}>Step 3: Create Account</Text>
-          <TextInput placeholder="Create User ID" style={styles.input} onChangeText={(text) => handleChange('userId', text)} />
-          <TextInput placeholder="Create Password" style={styles.input} secureTextEntry onChangeText={(text) => handleChange('password', text)} />
-          <TouchableOpacity
+            <View style={styles.stepContainer}>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Create User ID *</Text>
+                <TextInput
+                  placeholder="Choose a unique user ID"
+                  style={styles.input}
+                  value={formData.userId}
+                  onChangeText={(text) => handleChange('userId', text)}
+                  placeholderTextColor="#8B9A8B"
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Create Password *</Text>
+                <TextInput
+                  placeholder="Choose a strong password"
+                  style={styles.input}
+                  secureTextEntry
+                  value={formData.password}
+                  onChangeText={(text) => handleChange('password', text)}
+                  placeholderTextColor="#8B9A8B"
+                />
+              </View>
+
+              <TouchableOpacity
                 style={styles.consentContainer}
                 onPress={() => handleChange('parentConsent', !formData.parentConsent)}
               >
@@ -383,13 +408,17 @@ export default function SignupScreen() {
                   I give my consent for my child's information to be registered and used for health monitoring purposes.
                 </Text>
               </TouchableOpacity>
-          <View style={styles.nav}>
-            <Button title="Back" onPress={handleBack} />
-            <Button title="Review & Submit" onPress={handleNext} />
-          </View>
-        </>
-      )}
 
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+                  <Text style={styles.nextButtonText}>Review →</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
       {step === 4 && (
         <>
           <Text style={styles.heading}>Overview</Text>
@@ -397,10 +426,18 @@ export default function SignupScreen() {
             <Text key={key} style={styles.overviewText}>{key}: {String(value)}</Text>
           ))}
           {formData.childImage && <Image source={{ uri: formData.childImage }} style={styles.childImagePreviewLarge} />}
-          <View style={styles.nav}>
-            <Button title="Back" onPress={handleBack} />
-            <Button title="Submit" onPress={handleSubmit} />
-          </View>
+          <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.submitButton, !formData.parentConsent && styles.submitButtonDisabled]} 
+                  onPress={handleSubmit}
+                  disabled={!formData.parentConsent}
+                >
+                  <Text style={styles.submitButtonText}>Submit Registration</Text>
+                </TouchableOpacity>
+              </View>
         </>
       )}
 
@@ -456,7 +493,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   imageUploadBox: {
-    backgroundColor: 'light green',
+    color: 'green',
     marginBottom: 20,
     alignItems: 'center',
   },
@@ -476,12 +513,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 16,
-  },
-  checkbox: {
-    backgroundColor: '#333',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
   },
   overviewText: {
     color: '#222',
@@ -520,5 +551,91 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 8,
     marginLeft: 5,
-  }
-});
+  },
+    nextButton: {
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 12,
+      backgroundColor: '#4A7C59',
+      shadowColor: '#4A7C59',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+  },
+    
+  checkboxChecked: {
+    backgroundColor: '#4A7C59',
+    borderColor: '#4A7C59',
+  },
+  checkmark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  consentText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2D5016',
+    lineHeight: 20,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  backButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#4A7C59',
+    backgroundColor: '#FFFFFF',
+  },
+  backButtonText: {
+    color: '#4A7C59',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  submitButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#4A7C59',
+    shadowColor: '#4A7C59',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#C4E5C4',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  nextButtonText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  checkbox: {
+      width: 20,
+      height: 20,
+      borderWidth: 2,
+      borderColor: '#C4E5C4',
+      borderRadius: 4,
+      marginRight: 12,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: '#FFFFFF',
+  },
+  uploadButton: {
+    Color: '#4A7C59',
+  },
+  },);
