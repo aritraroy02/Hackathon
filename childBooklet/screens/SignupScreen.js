@@ -36,6 +36,7 @@ export default function SignupScreen() {
     illnesses: '',
     userId: '',
     password: '',
+    gender: '',
     parentConsent: false,
     childImage: null,
   });
@@ -131,13 +132,21 @@ export default function SignupScreen() {
             onChangeText={(text) => handleChange('childName', text)}
           />
 
-           <TextInput
-            placeholder="Gender"
-            style={styles.input}
-            onChangeText={(text) => handleChange('Gender', text)}
+           <RNPickerSelect
+            onValueChange={(value) => handleChange('gender', value)}
             value={formData.gender}
-          />
-
+            items={[
+              { label: 'Male', value: 'Male' },
+              { label: 'Female', value: 'Female' },
+            ]}
+            placeholder={{ label: 'Select Gender', value: '' }}
+            style={{
+              inputIOS: styles.input,
+              inputAndroid: styles.input,
+            }}
+            useNativeAndroidPickerStyle={false}
+            />
+  
           <View style={styles.imageUploadBox}>
             {formData.childImage && (
               <Image source={{ uri: formData.childImage }} style={styles.childImagePreview} />
