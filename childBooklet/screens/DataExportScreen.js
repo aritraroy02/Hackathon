@@ -144,37 +144,37 @@ export default function DataExportScreen({ route, navigation }) {
     }
   };
 
-  const handleDataRequest = () => {
-    Alert.alert(
-      'Data Request',
-      'Your data request has been submitted. You will receive a complete copy of your child\'s data within 24 hours.',
-      [{ text: 'OK' }]
-    );
-  };
+  // const handleDataRequest = () => {
+  //   Alert.alert(
+  //     'Data Request',
+  //     'Your data request has been submitted. You will receive a complete copy of your child\'s data within 24 hours.',
+  //     [{ text: 'OK' }]
+  //   );
+  // };
 
-  const handleDataDeletion = () => {
-    Alert.alert(
-      'Delete Data',
-      'Are you sure you want to delete all data for this child? This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Data Deleted', 'All data has been permanently deleted.');
-            navigation.goBack();
-          },
-        },
-      ]
-    );
-  };
+  // const handleDataDeletion = () => {
+  //   Alert.alert(
+  //     'Delete Data',
+  //     'Are you sure you want to delete all data for this child? This action cannot be undone.',
+  //     [
+  //       { text: 'Cancel', style: 'cancel' },
+  //       {
+  //         text: 'Delete',
+  //         style: 'destructive',
+  //         onPress: () => {
+  //           Alert.alert('Data Deleted', 'All data has been permanently deleted.');
+  //           navigation.goBack();
+  //         },
+  //       },
+  //     ]
+  //   );
+  // };
 
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Data Export & Sharing</Text>
       <Text style={styles.subtitle}>
-        Manage your child's health data - export, share, or request deletion
+        Manage your child's health data - export, share, or upload pending records
       </Text>
 
       {/* Export Section */}

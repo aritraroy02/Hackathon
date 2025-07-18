@@ -36,7 +36,6 @@ export default function SignupScreen({ navigation }) {
   const [inches, setInches] = useState('');
   const [errors, setErrors] = useState({});
   const [phoneError, setPhoneError] = useState('');
-  const [aadharError, setAadharError] = useState('');
   const [customRelation, setCustomRelation] = useState('');
 
   const [formData, setFormData] = useState({
@@ -45,7 +44,6 @@ export default function SignupScreen({ navigation }) {
     age: '',
     localId: '',
     idType: '',
-    aadharNumber: '',
     weight: '',
     height: '',
     guardianName: '',
@@ -355,7 +353,6 @@ export default function SignupScreen({ navigation }) {
       age: '',
       localId: '',
       idType: '',
-      aadharNumber: '',
       weight: '',
       height: '',
       guardianName: '',
@@ -376,10 +373,7 @@ export default function SignupScreen({ navigation }) {
     setPhoneError('');
   };
 
-  const reviewEntries = Object.entries({
-    ...formData,
-    childName: `${formData.childFirstName} ${formData.childLastName}`.trim(),
-  }).filter(([k]) => !['childFirstName', 'childLastName', 'childImage'].includes(k));
+  const reviewEntries = Object.entries(formData).filter(([k]) => !['childImage'].includes(k));
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -417,13 +411,6 @@ export default function SignupScreen({ navigation }) {
             {formData.facePhoto && (
               <Image source={{ uri: formData.facePhoto }} style={styles.childImagePreview} />
             )}
-<<<<<<< Updated upstream
-            <Button
-              title={formData.childImage ? 'Change Photo' : 'Upload Child Photo'}
-              onPress={handlePickImage}
-              color="#05ff50ff"
-            />
-=======
             <TouchableOpacity
               style={styles.uploadButton}
               onPress={handleImagePicker}
@@ -432,7 +419,6 @@ export default function SignupScreen({ navigation }) {
                 {formData.facePhoto ? 'Change Photo' : 'Upload Child Photo'}
               </Text>
             </TouchableOpacity>
->>>>>>> Stashed changes
           </View>
 
           <TextInput
@@ -473,12 +459,12 @@ export default function SignupScreen({ navigation }) {
               style={styles.input}
               keyboardType="numeric"
               maxLength={14}
-              value={formData.aadharNumber}
+              value={formData.localId}
               onChangeText={(text) => {
                 const cleaned = text.replace(/\D/g, '');
                 let formatted = cleaned.match(/.{1,4}/g)?.join(' ') || '';
                 if (formatted.length <= 14) {
-                  handleChange('aadharNumber', formatted);
+                  handleChange('localId', formatted);
                 }
               }}
             />
