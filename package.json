@@ -1,7 +1,12 @@
 {
   "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
     "expo": "^48.0.21",
     "expo-cli": "^6.3.10",
+    "express": "^5.1.0",
+    "mongoose": "^8.16.4",
+    "multer": "^2.0.2",
     "react-native": "0.71.14",
     "react-native-picker-select": "^9.3.1"
   }
