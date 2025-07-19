@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import axios from 'axios';
+
+
 import {
   View,
   Text,
@@ -63,10 +66,44 @@ export default function SignupScreen() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = () => {
-    Alert.alert('Success', `Your Unique ID: XYZ1234\nPassword: ${formData.password}`);
-    setStep(5);
-  };
+  const handleSubmit = async () => {
+  try {
+    const form = { ...formData };
+
+    const formDataToSend = new FormData();
+    formDataToSend.append('data', JSON.stringify(form));
+
+    if (form.childImage) {
+      const filename = form.childImage.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const ext = match?.[1];
+      const type = `image/${ext}`;
+
+      formDataToSend.append('childImage', {
+        uri: form.childImage,
+        name: filename,
+        type,
+      });
+    }
+
+    // ✅ Replace with your PC’s IP address and port
+    const res = await axios.post('http://192.168.1.34:3000/submit-form', formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (res.data.success) {
+      console.log('Data stored with ID:', res.data.id);
+      setStep(5); // move to next screen
+    } else {
+      alert('Failed to submit. Try again.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Submission error!');
+  }
+};
 
   const handlePickImage = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
