@@ -171,7 +171,11 @@ export default function DataExportScreen({ route, navigation }) {
   // };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={true}
+    >
       <Text style={styles.title}>Data Export & Sharing</Text>
       <Text style={styles.subtitle}>
         Manage your child's health data - export, share, or upload pending records
@@ -356,7 +360,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8f9fa',
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40, // Extra padding at bottom for scroll
   },
   title: {
     fontSize: 24,
