@@ -3,6 +3,9 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const Child = require('./models/Child');
 
+// Load environment variables
+require('dotenv').config();
+
 const app = express();
 
 // Middleware
@@ -15,22 +18,52 @@ mongoose.set('strictQuery', false);
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect('mongodb://127.0.0.1:27017/childHealth', {
+    const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/childHealth';
+    console.log('Attempting to connect to MongoDB...');
+    
+    const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000, // 5 second timeout
-      heartbeatFrequencyMS: 1000, // Check server every second
+      serverSelectionTimeoutMS: 30000, // 30 second timeout for cloud connection
+      socketTimeoutMS: 45000, // Socket timeout
+      maxPoolSize: 10, // Maximum number of connections in pool
+      retryWrites: true,
+      w: 'majority'
     });
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    
+    console.log(`✅ MongoDB Connected Successfully: ${conn.connection.host}`);
+    console.log(`✅ Database: ${conn.connection.name}`);
     
     // Create indexes for better query performance
-    await Child.collection.createIndex({ healthId: 1 }, { unique: true });
-    console.log('Database indexes created');
+    try {
+      await Child.collection.createIndex({ healthId: 1 }, { unique: true });
+      console.log('✅ Database indexes created');
+    } catch (indexError) {
+      if (indexError.code === 11000) {
+        console.log('✅ Index already exists');
+      } else {
+        console.log('⚠️  Index creation warning:', indexError.message);
+      }
+    }
   } catch (error) {
-    console.error('Error connecting to MongoDB:', error);
+    console.error('❌ MongoDB Connection Error:', error.message);
+    console.error('Full error:', error);
     process.exit(1);
   }
 };
+
+// Handle MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('🔗 Mongoose connected to MongoDB');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ Mongoose connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('🔌 Mongoose disconnected');
+});
 
 // Connect to MongoDB
 connectDB();
