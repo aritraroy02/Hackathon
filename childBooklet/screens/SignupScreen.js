@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { makeRequest, API_ENDPOINTS } from '../config/api';
 import {
   View,
   Text,
@@ -250,7 +251,7 @@ export default function SignupScreen({ navigation }) {
     }
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
     if (!validateForm()) {
       Alert.alert('Validation Error', 'Please fix the errors in the form before submitting.');
       return;
@@ -280,22 +281,40 @@ export default function SignupScreen({ navigation }) {
       }));
 
       if (isConnected) {
-        // TODO: Implement API call to save online
-        console.log('Saving online:', record);
-        Alert.alert(
-          'Success',
-          `Child record saved successfully!\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`,
-          [
-            {
-              text: 'Share Health ID',
-              onPress: () => shareHealthId(healthId),
-            },
-            {
-              text: 'Continue',
-              onPress: () => setStep(4),
-            },
-          ]
-        );
+        try {
+          const response = await makeRequest(API_ENDPOINTS.CHILDREN, 'POST', record);
+          if (response.success) {
+            Alert.alert(
+              'Success',
+              `Child record saved successfully!\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`,
+              [
+                {
+                  text: 'Share Health ID',
+                  onPress: () => shareHealthId(healthId),
+                },
+                {
+                  text: 'Continue',
+                  onPress: () => setStep(4),
+                },
+              ]
+            );
+          } else {
+            throw new Error('Failed to save record');
+          }
+        } catch (error) {
+          console.error('API Error:', error);
+          // If API call fails, save offline
+          const saved = await saveRecordOffline(record);
+          if (saved) {
+            Alert.alert(
+              'Saved Offline',
+              `Failed to save online. Record saved locally!\n\nHealth ID: ${healthId}\n\nThe record will be uploaded when internet connection is restored.`,
+              [{ text: 'OK', onPress: () => setStep(4) }]
+            );
+          } else {
+            Alert.alert('Error', 'Failed to save record. Please try again.');
+          }
+        }
       } else {
         // Save offline
         const saved = await saveRecordOffline(record);
