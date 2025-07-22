@@ -1,12 +1,25 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+// Production API URL from Google Cloud Run
+const PRODUCTION_API_URL = 'https://child-health-backend-747316458447.us-central1.run.app/api';
+
+// Development settings
 const API_PORT = 5001;
 const LAPTOP_IP = '10.71.101.119'; // Your laptop's IP address
 
-// Determine the correct API URL based on the platform and environment
+// Determine if we're in production or development
+// For now, we'll always use the production URL since it's deployed
+const isProduction = true; // Force production mode to use Cloud Run
+
+// Determine the correct API URL based on the environment and platform
 const getApiBaseUrl = () => {
-  // Check if running in Expo Go (on a real device)
+  // Use production URL if in production environment or forced
+  if (isProduction) {
+    return PRODUCTION_API_URL;
+  }
+  
+  // Development environment - check platform
   const isExpoGo = Constants.appOwnership === 'expo';
   
   if (isExpoGo) {
@@ -23,6 +36,7 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 console.log('API Base URL:', API_BASE_URL);
+console.log('Production mode:', isProduction);
 console.log('Running on Expo Go:', Constants.appOwnership === 'expo');
 
 export const API_ENDPOINTS = {

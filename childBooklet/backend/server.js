@@ -3,8 +3,10 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const Child = require('./models/Child');
 
-// Load environment variables
-require('dotenv').config();
+// Load environment variables (only if not in production/cloud environment)
+if (!process.env.MONGODB_URI || process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 
 const app = express();
 
@@ -18,8 +20,21 @@ mongoose.set('strictQuery', false);
 
 const connectDB = async () => {
   try {
+    // Debug all environment variables
+    console.log('All environment variables:');
+    console.log('MONGODB_URI:', process.env.MONGODB_URI);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('PORT:', process.env.PORT);
+    
     const mongoURI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/childHealth';
     console.log('Attempting to connect to MongoDB...');
+    console.log('Final MongoDB URI:', mongoURI.substring(0, 50) + '...');
+    console.log('MongoDB URI configured:', mongoURI ? 'Yes' : 'No');
+    console.log('Environment variables:', {
+      MONGODB_URI: process.env.MONGODB_URI ? 'Set' : 'Not set',
+      NODE_ENV: process.env.NODE_ENV || 'Not set',
+      PORT: process.env.PORT || 'Not set'
+    });
     
     const conn = await mongoose.connect(mongoURI, {
       useNewUrlParser: true,
@@ -48,7 +63,10 @@ const connectDB = async () => {
   } catch (error) {
     console.error('❌ MongoDB Connection Error:', error.message);
     console.error('Full error:', error);
-    process.exit(1);
+    // Don't exit in production, let the app continue and retry
+    if (process.env.NODE_ENV !== 'production') {
+      process.exit(1);
+    }
   }
 };
 
@@ -70,6 +88,19 @@ connectDB();
 
 // Routes
 
+// Root health check
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Child Health Backend API is running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/api/health',
+      children: '/api/children',
+      bulkUpload: '/api/children/bulk'
+    }
+  });
+});
 
 // Create new child record
 app.post('/api/children', async (req, res) => {
@@ -207,6 +238,9 @@ app.post('/api/children/bulk', async (req, res) => {
 app.get('/api/health', async (req, res) => {
   try {
     // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      throw new Error('Database not connected');
+    }
     await mongoose.connection.db.admin().ping();
     res.json({
       success: true,
@@ -220,6 +254,7 @@ app.get('/api/health', async (req, res) => {
       status: 'unhealthy',
       database: 'disconnected',
       error: error.message,
+      readyState: mongoose.connection.readyState,
       timestamp: new Date().toISOString()
     });
   }
