@@ -347,21 +347,57 @@ const handleSubmit = async () => {
 
   const uploadPendingRecords = async () => {
     try {
-      // TODO: Implement API calls to upload pending records
+      // Check network connectivity before attempting upload
+      const netInfo = await NetInfo.fetch();
+      if (!netInfo.isConnected) {
+        Alert.alert(
+          'No Internet Connection',
+          'Please check your internet connection and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       console.log('Uploading pending records:', pendingRecords);
       
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use bulk upload endpoint to upload all pending records at once
+      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
+      
+      console.log('Bulk upload response:', response);
       
       // Clear pending records after successful upload
       await AsyncStorage.removeItem('pendingChildRecords');
       setPendingRecords([]);
       setShowUploadPrompt(false);
       
-      Alert.alert('Success', `${pendingRecords.length} record(s) uploaded successfully!`);
+      // Show detailed results if available
+      let successMessage = `${pendingRecords.length} record(s) uploaded successfully!`;
+      if (response.summary) {
+        successMessage = `Upload Summary:\n• Created: ${response.summary.successful}\n• Updated: ${response.summary.updated}\n• Failed: ${response.summary.failed}\n• Total: ${response.summary.total}`;
+      }
+      
+      Alert.alert('Success', successMessage);
     } catch (error) {
       console.error('Error uploading records:', error);
-      Alert.alert('Upload Error', 'Failed to upload some records. Please try again.');
+      
+      let errorMessage = 'Failed to upload some records. Please try again.';
+      
+      if (error.message.includes('Network request failed')) {
+        errorMessage = 'Network connection failed. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try again with a better connection.';
+      } else if (error.message) {
+        errorMessage = `Upload failed: ${error.message}`;
+      }
+      
+      Alert.alert(
+        'Upload Error',
+        errorMessage,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => uploadPendingRecords() }
+        ]
+      );
     }
   };
 

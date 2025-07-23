@@ -1,0 +1,201 @@
+{
+  "project_name": "childBooklet",
+  "project_type": "Mobile Application (React Native/Expo)",
+  "description": "A mobile application for health workers to monitor and track child health data with offline capabilities",
+  
+  "tech_stack": {
+    "frontend": {
+      "framework": "React Native with Expo SDK 53.0.20",
+      "react_version": "19.0.0",
+      "react_native_version": "0.79.5",
+      "navigation": "@react-navigation/native with native-stack",
+      "state_management": "React Hooks (useState, useEffect)",
+      "ui_components": "Native React Native components with custom styling",
+      "key_libraries": [
+        "@react-native-async-storage/async-storage - Local storage",
+        "@react-native-community/datetimepicker - Date/time selection",
+        "@react-native-community/netinfo - Network connectivity monitoring",
+        "expo-image-picker - Camera and image selection",
+        "expo-location - GPS location services",
+        "react-native-picker-select - Dropdown selectors",
+        "axios - HTTP client"
+      ]
+    },
+    "backend": {
+      "runtime": "Node.js",
+      "framework": "Express.js 5.1.0",
+      "database": "MongoDB with Mongoose ODM 8.16.4",
+      "middleware": ["cors", "body-parser", "multer for file uploads"],
+      "deployment": "Google Cloud Run",
+      "environment": "Production and Development configurations"
+    },
+    "data_storage": {
+      "local": "AsyncStorage for offline data persistence",
+      "remote": "MongoDB Atlas cloud database",
+      "file_storage": "Base64 encoded images"
+    }
+  },
+
+  "architecture": {
+    "pattern": "Client-Server Architecture with Offline-First Design",
+    "mobile_app": {
+      "screens": ["LoginScreen", "HomeScreen", "SignupScreen", "DataExportScreen"],
+      "navigation": "Stack-based navigation with initial route as Login",
+      "offline_support": "AsyncStorage for caching and sync when online"
+    },
+    "backend_api": {
+      "type": "RESTful API",
+      "endpoints": [
+        "GET /api/health - Health check",
+        "POST /api/children - Create child record",
+        "GET /api/children - Get all children",
+        "GET /api/children/:healthId - Get specific child",
+        "PUT /api/children/:healthId - Update child record",
+        "DELETE /api/children/:healthId - Delete child record",
+        "POST /api/children/bulk - Bulk upload for offline sync"
+      ]
+    }
+  },
+
+  "core_features": {
+    "user_management": {
+      "authentication": "Basic login screen (currently bypassed)",
+      "user_roles": "Health Workers",
+      "profile_management": "User profile with location tracking"
+    },
+    "child_registration": {
+      "data_collection": [
+        "Child basic info (name, age, gender)",
+        "Physical measurements (weight, height)",
+        "Guardian information (name, relation, phone)",
+        "Health data (malnutrition signs, recent illnesses)",
+        "Photo capture (face photo)",
+        "ID management (local ID, Aadhar support)"
+      ],
+      "validation": "Form validation with error handling",
+      "consent_management": "Parental consent tracking"
+    },
+    "offline_capabilities": {
+      "data_persistence": "AsyncStorage for offline record storage",
+      "connectivity_monitoring": "Real-time network status tracking",
+      "sync_mechanism": "Bulk upload when connection restored",
+      "conflict_resolution": "Update existing records on duplicate healthId"
+    },
+    "data_export": {
+      "formats": ["JSON", "CSV", "TXT"],
+      "sharing": "Native share functionality",
+      "pending_records": "View and upload queued offline records"
+    },
+    "location_services": {
+      "gps_tracking": "Current location with reverse geocoding",
+      "permission_management": "Location permission handling",
+      "address_display": "City/state display from coordinates"
+    }
+  },
+
+  "data_models": {
+    "Child": {
+      "required_fields": [
+        "childName (String)",
+        "age (String)",
+        "gender (String, enum: Male/Female)",
+        "weight (String)",
+        "height (String)",
+        "guardianName (String)",
+        "relation (String)",
+        "phone (String)",
+        "parentsConsent (Boolean)",
+        "healthId (String, unique)"
+      ],
+      "optional_fields": [
+        "facePhoto (String - URL/base64)",
+        "localId (String)",
+        "idType (String, enum: local/aadhar)",
+        "countryCode (String, default: +91)",
+        "malnutritionSigns (String)",
+        "recentIllnesses (String)",
+        "skipMalnutrition (Boolean)",
+        "skipIllnesses (Boolean)",
+        "dateCollected (Date)",
+        "isOffline (Boolean)"
+      ]
+    },
+    "User": {
+      "status": "Model defined but empty - authentication not fully implemented"
+    }
+  },
+
+  "key_workflows": {
+    "child_registration_flow": [
+      "1. Navigate from Home to Signup screen",
+      "2. Multi-step form with validation",
+      "3. Photo capture (camera or library)",
+      "4. Health data collection",
+      "5. Generate unique healthId",
+      "6. Save locally if offline, upload if online",
+      "7. Show success confirmation"
+    ],
+    "offline_sync_flow": [
+      "1. Monitor network connectivity",
+      "2. Store records in AsyncStorage when offline",
+      "3. Detect when connection restored",
+      "4. Prompt user to upload pending records",
+      "5. Bulk upload with individual record handling",
+      "6. Update existing records or create new ones",
+      "7. Clear local storage on success"
+    ],
+    "data_export_flow": [
+      "1. Access from Home screen",
+      "2. Select export format (JSON/CSV/TXT)",
+      "3. Format data according to selection",
+      "4. Use native share functionality",
+      "5. Option to view and upload pending records"
+    ]
+  },
+
+  "deployment_configuration": {
+    "production_api": "https://child-health-backend-747316458447.us-central1.run.app/api",
+    "development_options": [
+      "Android emulator: http://10.0.2.2:5001/api",
+      "iOS simulator: http://localhost:5001/api",
+      "Expo Go on device: http://[LAPTOP_IP]:5001/api"
+    ],
+    "cloud_provider": "Google Cloud Platform",
+    "container": "Cloud Run service",
+    "database": "MongoDB Atlas"
+  },
+
+  "security_considerations": {
+    "data_protection": "Health data handled with consent tracking",
+    "unique_identifiers": "Auto-generated healthId system",
+    "permission_management": "Camera, location, and storage permissions",
+    "network_security": "HTTPS endpoints for production API"
+  },
+
+  "ui_design": {
+    "theme": "Green healthcare theme (#4A7C59, #2D5016)",
+    "design_patterns": ["Cards", "Modal dialogs", "Form steps", "Status indicators"],
+    "accessibility": "Large touch targets, clear typography",
+    "responsive": "Mobile-first design for various screen sizes"
+  },
+
+  "testing_infrastructure": {
+    "test_files": [
+      "backend/test-mongo.js - MongoDB connection testing",
+      "backend/test-bulk-upload.js - Bulk upload testing",
+      "backend/send-test-data.js - Test data generation",
+      "backend/clear-test-data.js - Test data cleanup"
+    ]
+  },
+
+  "potential_improvements": [
+    "Complete user authentication system",
+    "Data encryption for sensitive health information",
+    "Push notifications for health reminders",
+    "Advanced reporting and analytics",
+    "Multi-language support",
+    "Integration with existing health systems",
+    "Backup and disaster recovery mechanisms",
+    "Enhanced error handling and logging"
+  ]
+}

@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function DataExportScreen({ route, navigation }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -67,22 +68,60 @@ export default function DataExportScreen({ route, navigation }) {
       return;
     }
 
+    // Check network connectivity before attempting upload
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setIsUploading(true);
     try {
-      // Simulate upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use bulk upload endpoint to upload all pending records at once
+      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
       
-      // Clear pending records from AsyncStorage
+      console.log('Bulk upload response:', response);
+      
+      // Clear pending records from AsyncStorage if successful
       await AsyncStorage.removeItem('pendingChildRecords');
       setPendingRecords([]);
       
+      // Show detailed results if available
+      let successMessage = `Successfully uploaded ${pendingRecords.length} child record(s) to the server.`;
+      if (response.summary) {
+        successMessage = `Upload Summary:\n• Created: ${response.summary.successful}\n• Updated: ${response.summary.updated}\n• Failed: ${response.summary.failed}\n• Total: ${response.summary.total}`;
+      }
+
       Alert.alert(
         'Upload Complete',
-        `Successfully uploaded ${pendingRecords.length} child record(s) to the server.`,
+        successMessage,
         [{ text: 'OK' }]
       );
     } catch (error) {
-      Alert.alert('Upload Error', 'Failed to upload records: ' + error.message);
+      console.error('Upload error:', error);
+      
+      let errorMessage = 'Failed to upload records. Please try again.';
+      
+      if (error.message.includes('Network request failed')) {
+        errorMessage = 'Network connection failed. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try again with a better connection.';
+      } else if (error.message) {
+        errorMessage = `Upload failed: ${error.message}`;
+      }
+      
+      Alert.alert(
+        'Upload Error',
+        errorMessage,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => uploadPendingRecords() }
+        ]
+      );
     } finally {
       setIsUploading(false);
     }
