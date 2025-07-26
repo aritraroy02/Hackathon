@@ -177,18 +177,18 @@ export default function HomeScreen({ navigation }) {
 
       {/* Bottom Tab Bar */}
       <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Home')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Register')}>
           <View style={styles.tabIconContainer}>
-            <Ionicons name="home" size={18} color="#4A7C59" />
+            <Ionicons name="person-add" size={18} color="#4A7C59" />
           </View>
-          <Text style={styles.tabLabel}>Home</Text>
+          <Text style={styles.tabLabel}>Register</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('DataExport')}>
           <View style={styles.tabIconContainer}>
-            <Ionicons name="document-text" size={18} color="#4A7C59" />
+            <Ionicons name="eye" size={18} color="#4A7C59" />
           </View>
-          <Text style={styles.tabLabel}>Records</Text>
+          <Text style={styles.tabLabel}>View</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setModalVisible(true)}>
