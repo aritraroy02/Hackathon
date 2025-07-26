@@ -16,6 +16,7 @@ import {
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
+import { BlurView } from 'expo-blur';
 
 export default function HomeScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
@@ -201,6 +202,20 @@ export default function HomeScreen({ navigation }) {
       {/* Slide-out Menu */}
       {menuVisible && (
         <View style={styles.menuOverlay}>
+          <BlurView intensity={80} tint="dark" style={styles.blurOverlay}>
+            <Animated.View 
+              style={[
+                styles.overlayTouchable,
+                { opacity: overlayOpacity }
+              ]}
+            >
+              <TouchableOpacity 
+                style={styles.overlayTouchableArea}
+                activeOpacity={1} 
+                onPress={toggleMenu}
+              />
+            </Animated.View>
+          </BlurView>
           <Animated.View 
             style={[
               styles.slideMenu,
@@ -286,18 +301,6 @@ export default function HomeScreen({ navigation }) {
                 </View>
               </TouchableOpacity>
             </ScrollView>
-          </Animated.View>
-          <Animated.View 
-            style={[
-              styles.overlayTouchable,
-              { opacity: overlayOpacity }
-            ]}
-          >
-            <TouchableOpacity 
-              style={styles.overlayTouchableArea}
-              activeOpacity={1} 
-              onPress={toggleMenu}
-            />
           </Animated.View>
         </View>
       )}
@@ -484,13 +487,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     zIndex: 1000,
   },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
   overlayTouchable: {
     position: 'absolute',
     top: 0,
     left: 300,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
   },
   overlayTouchableArea: {
     flex: 1,
