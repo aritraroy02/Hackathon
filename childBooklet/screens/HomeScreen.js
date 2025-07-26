@@ -8,16 +8,31 @@ import {
   SafeAreaView,
   Modal,
   Alert,
+  Animated,
+  StatusBar,
+  Platform,
+  Dimensions,
 } from 'react-native';
+import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 
 export default function HomeScreen({ navigation }) {
   const [modalVisible, setModalVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState(null);
   const [locationString, setLocationString] = useState('Loading...');
   const [userName] = useState('Health Worker'); // This can be passed from login later
+  const slideAnim = useState(new Animated.Value(-300))[0];
+  const [statusBarHeight, setStatusBarHeight] = useState(0);
+
+  // Get status bar height
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      setStatusBarHeight(StatusBar.currentHeight || 0);
+    }
+  }, []);
 
   // Check internet connectivity
   useEffect(() => {
@@ -60,52 +75,186 @@ export default function HomeScreen({ navigation }) {
     })();
   }, []);
 
+  // Toggle hamburger menu with optimized animation
+  const toggleMenu = () => {
+    if (menuVisible) {
+      // Closing animation - slide out quickly
+      Animated.timing(slideAnim, {
+        toValue: -300,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => setMenuVisible(false));
+    } else {
+      // Opening animation - slide in with smooth timing
+      setMenuVisible(true);
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  };
+
+  // Navigation handlers
+  const handleViewChildData = () => {
+    setMenuVisible(false);
+    navigation.navigate('DataExport');
+  };
+
+  const handleExportChildData = () => {
+    setMenuVisible(false);
+    navigation.navigate('DataExport');
+  };
+
+  const handleNearestHub = () => {
+    setMenuVisible(false);
+    Alert.alert('Nearest Hub', 'Finding nearest health hub...');
+  };
+
+  const handleUploadPendingData = () => {
+    setMenuVisible(false);
+    Alert.alert('Upload Data', 'Uploading pending child data...');
+  };
+
+  const handleContactUs = () => {
+    setMenuVisible(false);
+    Alert.alert('Contact Us', 'Contact information: support@childhealth.com');
+  };
+
+  const handleLogout = () => {
+    setMenuVisible(false);
+    navigation.navigate('Login');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Profile Block */}
-      <TouchableOpacity style={styles.profileBlock} onPress={() => setModalVisible(true)}>
-        <View style={styles.profileIcon}>
-          <Text style={styles.profileIconText}>👤</Text>
-        </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{userName}</Text>
-          <View style={styles.onlineStatus}>
-            <View style={[styles.statusDot, { backgroundColor: isOnline ? '#4CAF50' : '#F44336' }]} />
-            <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
+      <StatusBar 
+        barStyle="dark-content" 
+        backgroundColor="#FFFFFF" 
+        translucent={false} 
+      />
+      {/* Status Bar Spacer for Android */}
+      {Platform.OS === 'android' && <View style={{ height: statusBarHeight, backgroundColor: '#FFFFFF' }} />}
+      {/* Header with Hamburger Menu */}
+      <View style={styles.headerContainer}>
+        <TouchableOpacity 
+          style={styles.hamburgerButton} 
+          onPress={toggleMenu}
+          accessibilityLabel="Open navigation menu"
+          accessibilityRole="button"
+        >
+          <Ionicons name="menu" size={24} color="#4A7C59" />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.profileButton} onPress={() => setModalVisible(true)}>
+          <View style={styles.profileCircle}>
+            <Ionicons name="person" size={20} color="#FFFFFF" />
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Field Representative Health Workers</Text>
-          <Text style={styles.subtitle}>Child Health Monitoring System</Text>
+      {/* Main Content - Empty for now */}
+      <View style={styles.mainContent}>
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.welcomeSubtitle}>Use the menu to navigate through the app</Text>
         </View>
+      </View>
 
-        <View style={styles.actionsContainer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('Signup')}
+      {/* Bottom Tab Bar */}
+      <View style={styles.bottomTabBar}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Home')}>
+          <View style={styles.tabIconContainer}>
+            <Ionicons name="home" size={18} color="#4A7C59" />
+          </View>
+          <Text style={styles.tabLabel}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('DataExport')}>
+          <View style={styles.tabIconContainer}>
+            <Ionicons name="document-text" size={18} color="#4A7C59" />
+          </View>
+          <Text style={styles.tabLabel}>Records</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.tabItem} onPress={() => setModalVisible(true)}>
+          <View style={styles.tabIconContainer}>
+            <Ionicons name="settings" size={18} color="#4A7C59" />
+          </View>
+          <Text style={styles.tabLabel}>Settings</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Slide-out Menu */}
+      {menuVisible && (
+        <View style={styles.menuOverlay}>
+          <Animated.View 
+            style={[
+              styles.slideMenu,
+              { transform: [{ translateX: slideAnim }] }
+            ]}
           >
-            <Text style={styles.primaryButtonText}>📝 Register New Child</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('DataExport')}
-          >
-            <Text style={styles.secondaryButtonText}>📊 View Data & Reports</Text>
-          </TouchableOpacity>
+            <View style={styles.slideMenuHeader}>
+              <Text style={styles.slideMenuTitle}>Menu</Text>
+              <TouchableOpacity 
+                onPress={toggleMenu}
+                accessibilityLabel="Close navigation menu"
+                accessibilityRole="button"
+              >
+                <Text style={styles.closeMenuText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.slideMenuContent}>
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleViewChildData}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="bar-chart" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>VIEW CHILD DATA</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleExportChildData}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="document-text" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>EXPORT CHILD DATA</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleNearestHub}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="location" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>NEAREST HUB</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleUploadPendingData}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="cloud-upload" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>UPLOAD PENDING CHILD DATA</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleContactUs}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="call" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>CONTACT US</Text>
+                </View>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.slideMenuItem} onPress={handleLogout}>
+                <View style={styles.slideMenuItemContent}>
+                  <Ionicons name="log-out" size={18} color="#4A7C59" />
+                  <Text style={styles.slideMenuItemText}>LOGOUT</Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
+          </Animated.View>
+          <TouchableOpacity 
+            style={styles.overlayTouchable}
+            activeOpacity={1} 
+            onPress={toggleMenu}
+          />
         </View>
+      )}
 
-        <View style={styles.infoContainer}>
-          <Text style={styles.infoTitle}>Quick Actions</Text>
-          <Text style={styles.infoText}>• Register new children for health monitoring</Text>
-          <Text style={styles.infoText}>• Export and share health data</Text>
-          <Text style={styles.infoText}>• Track offline registrations</Text>
-          <Text style={styles.infoText}>• Monitor connectivity status</Text>
-        </View>
-      </ScrollView>
 
       {/* Profile Modal */}
       <Modal
@@ -164,7 +313,10 @@ export default function HomeScreen({ navigation }) {
                   navigation.navigate('Login');
                 }}
               >
-                <Text style={styles.logoutButtonText}>🚪 Logout</Text>
+                <View style={styles.logoutButtonContent}>
+                  <Ionicons name="log-out" size={16} color="#FFFFFF" />
+                  <Text style={styles.logoutButtonText}>Logout</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -179,111 +331,177 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
-    paddingTop: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2D5016',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#4A7C59',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  actionsContainer: {
-    marginBottom: 30,
-  },
-  primaryButton: {
-    backgroundColor: '#4A7C59',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 16,
-    shadowColor: '#4A7C59',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  secondaryButton: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#4A7C59',
-    borderWidth: 2,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  secondaryButtonText: {
-    color: '#4A7C59',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  infoContainer: {
-    backgroundColor: '#E8F5E8',
-    padding: 20,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C4E5C4',
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2D5016',
-    marginBottom: 12,
-  },
-  infoText: {
-    fontSize: 14,
-    color: '#2D5016',
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  // Profile Block Styles
-  profileBlock: {
+  // Header Styles
+  headerContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingTop: 15,
     backgroundColor: '#FFFFFF',
-    margin: 16,
-    marginBottom: 0,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
-  profileIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  hamburgerButton: {
+    padding: 10,
+    borderRadius: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  hamburgerText: {
+    fontSize: 24,
+    color: '#4A7C59',
+    fontWeight: 'bold',
+  },
+  profileButton: {
+    padding: 5,
+  },
+  profileCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#4A7C59',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+  },
+  // Main Content Styles
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4A7C59',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  // Bottom Tab Bar Styles
+  bottomTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  tabIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F8F9FA',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  tabIcon: {
+    fontSize: 18,
+  },
+  tabLabel: {
+    fontSize: 12,
+    color: '#4A7C59',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  // Slide Menu Styles
+  menuOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  overlayTouchable: {
+    position: 'absolute',
+    top: 0,
+    left: 300,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  slideMenu: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    width: 300,
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1001,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
+  },
+  slideMenuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#4A7C59',
+  },
+  slideMenuTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  closeMenuText: {
+    fontSize: 30,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  slideMenuContent: {
+    flex: 1,
+  },
+  slideMenuItem: {
+    backgroundColor: '#E6F0E6',
+    marginVertical: 8,
+    marginHorizontal: 12,
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    shadowColor: '#4A7C59',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  slideMenuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  slideMenuItemText: {
+    fontSize: 16,
+    color: '#4A7C59',
+    fontWeight: '500',
+    marginLeft: 12,
   },
   profileIconText: {
     fontSize: 24,
@@ -386,10 +604,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logoutButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
-    textAlign: 'center',
+    marginLeft: 8,
   },
 });
