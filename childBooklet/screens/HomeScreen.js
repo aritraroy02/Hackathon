@@ -177,7 +177,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* Bottom Tab Bar */}
       <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Register')}>
+        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Signup')}>
           <View style={styles.tabIconContainer}>
             <Ionicons name="person-add" size={18} color="#4A7C59" />
           </View>
