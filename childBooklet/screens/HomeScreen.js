@@ -25,6 +25,7 @@ export default function HomeScreen({ navigation }) {
   const [locationString, setLocationString] = useState('Loading...');
   const [userName] = useState('Health Worker'); // This can be passed from login later
   const slideAnim = useState(new Animated.Value(-300))[0];
+  const overlayOpacity = useState(new Animated.Value(0))[0];
   const [statusBarHeight, setStatusBarHeight] = useState(0);
 
   // Get status bar height
@@ -78,52 +79,66 @@ export default function HomeScreen({ navigation }) {
   // Toggle hamburger menu with optimized animation
   const toggleMenu = () => {
     if (menuVisible) {
-      // Closing animation - slide out quickly
-      Animated.timing(slideAnim, {
-        toValue: -300,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => setMenuVisible(false));
+      // Closing animation - slide out with overlay fade
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: -300,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        })
+      ]).start(() => setMenuVisible(false));
     } else {
-      // Opening animation - slide in with smooth timing
+      // Opening animation - slide in with overlay fade
       setMenuVisible(true);
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start();
     }
   };
 
   // Navigation handlers
   const handleViewChildData = () => {
-    setMenuVisible(false);
-    navigation.navigate('DataExport');
+    toggleMenu();
+    setTimeout(() => navigation.navigate('DataExport'), 250);
   };
 
   const handleExportChildData = () => {
-    setMenuVisible(false);
-    navigation.navigate('DataExport');
+    toggleMenu();
+    setTimeout(() => navigation.navigate('DataExport'), 250);
   };
 
   const handleNearestHub = () => {
-    setMenuVisible(false);
-    Alert.alert('Nearest Hub', 'Finding nearest health hub...');
+    toggleMenu();
+    setTimeout(() => Alert.alert('Nearest Hub', 'Finding nearest health hub...'), 250);
   };
 
   const handleUploadPendingData = () => {
-    setMenuVisible(false);
-    Alert.alert('Upload Data', 'Uploading pending child data...');
+    toggleMenu();
+    setTimeout(() => Alert.alert('Upload Data', 'Uploading pending child data...'), 250);
   };
 
   const handleContactUs = () => {
-    setMenuVisible(false);
-    Alert.alert('Contact Us', 'Contact information: support@childhealth.com');
+    toggleMenu();
+    setTimeout(() => Alert.alert('Contact Us', 'Contact information: support@childhealth.com'), 250);
   };
 
   const handleLogout = () => {
-    setMenuVisible(false);
-    navigation.navigate('Login');
+    toggleMenu();
+    setTimeout(() => navigation.navigate('Login'), 250);
   };
 
   return (
@@ -198,48 +213,73 @@ export default function HomeScreen({ navigation }) {
                 onPress={toggleMenu}
                 accessibilityLabel="Close navigation menu"
                 accessibilityRole="button"
+                style={styles.closeMenuButton}
               >
                 <Text style={styles.closeMenuText}>×</Text>
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.slideMenuContent}>
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleViewChildData}>
+            <ScrollView style={styles.slideMenuContent} showsVerticalScrollIndicator={false}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleViewChildData}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="bar-chart" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>VIEW CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleExportChildData}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleExportChildData}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="document-text" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>EXPORT CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleNearestHub}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleNearestHub}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="location" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>NEAREST HUB</Text>
                 </View>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleUploadPendingData}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleUploadPendingData}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="cloud-upload" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>UPLOAD PENDING CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleContactUs}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleContactUs}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="call" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>CONTACT US</Text>
                 </View>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.slideMenuItem} onPress={handleLogout}>
+              <TouchableOpacity 
+                style={styles.slideMenuItem} 
+                onPress={handleLogout}
+                activeOpacity={0.7}
+              >
                 <View style={styles.slideMenuItemContent}>
                   <Ionicons name="log-out" size={18} color="#4A7C59" />
                   <Text style={styles.slideMenuItemText}>LOGOUT</Text>
@@ -247,11 +287,18 @@ export default function HomeScreen({ navigation }) {
               </TouchableOpacity>
             </ScrollView>
           </Animated.View>
-          <TouchableOpacity 
-            style={styles.overlayTouchable}
-            activeOpacity={1} 
-            onPress={toggleMenu}
-          />
+          <Animated.View 
+            style={[
+              styles.overlayTouchable,
+              { opacity: overlayOpacity }
+            ]}
+          >
+            <TouchableOpacity 
+              style={styles.overlayTouchableArea}
+              activeOpacity={1} 
+              onPress={toggleMenu}
+            />
+          </Animated.View>
         </View>
       )}
 
@@ -445,6 +492,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
+  overlayTouchableArea: {
+    flex: 1,
+  },
+  closeMenuButton: {
+    padding: 8,
+    borderRadius: 20,
+    minWidth: 40,
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   slideMenu: {
     position: 'absolute',
     left: 0,
@@ -482,16 +540,18 @@ const styles = StyleSheet.create({
   },
   slideMenuItem: {
     backgroundColor: '#E6F0E6',
-    marginVertical: 8,
+    marginVertical: 6,
     marginHorizontal: 12,
     borderRadius: 12,
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     shadowColor: '#4A7C59',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 124, 89, 0.1)',
   },
   slideMenuItemContent: {
     flexDirection: 'row',
