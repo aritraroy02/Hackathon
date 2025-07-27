@@ -157,12 +157,10 @@ export default function HomeScreen({ navigation }) {
     <SafeAreaView style={themedStyles.container}>
       <StatusBar 
         barStyle={theme.statusBarStyle} 
-        backgroundColor={theme.statusBarBackground} 
+        backgroundColor={theme.primary} 
         translucent={false} 
       />
       
-      {/* Status Bar Spacer for Android */}
-      {Platform.OS === 'android' && <View style={{ height: statusBarHeight, backgroundColor: theme.headerBackground }} />}
       
       {/* Header with Hamburger Menu */}
       <View style={themedStyles.headerContainer}>
@@ -574,6 +572,8 @@ const createThemedStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.headerBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
+    // Ensure header extends to status bar on Android
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 15 : 15,
   },
   hamburgerButton: {
     padding: 10,
@@ -693,14 +693,16 @@ const createThemedStyles = (theme) => StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
     zIndex: 1001,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
   },
   slideMenuHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20,
     backgroundColor: theme.primary,
+    // Ensure the green header extends to the very top
+    minHeight: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 60 : 60,
   },
   slideMenuTitle: {
     fontSize: 20,
