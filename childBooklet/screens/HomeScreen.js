@@ -482,7 +482,7 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Clear Cache', 'Cache cleared successfully!')}>
                   <View style={themedStyles.settingInfo}>
                     <Ionicons name="trash-outline" size={20} color={theme.primary} />
-                    <Text style={themedStyles.settingLabel}>Clear Cache</Text>
+                    <Text style={themedStyles.settingLabel}> Clear Cache</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
                 </TouchableOpacity>
@@ -490,7 +490,7 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Export Data', 'Data export initiated...')}>
                   <View style={themedStyles.settingInfo}>
                     <Ionicons name="download-outline" size={20} color={theme.primary} />
-                    <Text style={themedStyles.settingLabel}>Export Data</Text>
+                    <Text style={themedStyles.settingLabel}> Export Data</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
                 </TouchableOpacity>
@@ -498,7 +498,7 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Privacy Policy', 'Opening privacy policy...')}>
                   <View style={themedStyles.settingInfo}>
                     <Ionicons name="shield-checkmark-outline" size={20} color={theme.primary} />
-                    <Text style={themedStyles.settingLabel}>Privacy Policy</Text>
+                    <Text style={themedStyles.settingLabel}> Privacy Policy</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
                 </TouchableOpacity>
@@ -511,7 +511,7 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Help & Support', 'Opening help center...')}>
                   <View style={themedStyles.settingInfo}>
                     <Ionicons name="help-circle-outline" size={20} color={theme.primary} />
-                    <Text style={themedStyles.settingLabel}>Help & Support</Text>
+                    <Text style={themedStyles.settingLabel}> Help & Support</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
                 </TouchableOpacity>
@@ -519,7 +519,7 @@ export default function HomeScreen({ navigation }) {
                 <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('App Version', 'Child Health Tracker v1.0.0')}>
                   <View style={themedStyles.settingInfo}>
                     <Ionicons name="information-circle-outline" size={20} color={theme.primary} />
-                    <Text style={themedStyles.settingLabel}>App Version</Text>
+                    <Text style={themedStyles.settingLabel}> App Version</Text>
                   </View>
                   <Text style={themedStyles.versionText}>v1.0.0</Text>
                 </TouchableOpacity>
