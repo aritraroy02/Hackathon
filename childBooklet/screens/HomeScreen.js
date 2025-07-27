@@ -20,6 +20,8 @@ import * as Location from 'expo-location';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { makeRequest, API_ENDPOINTS } from '../config/api';
 
 export default function HomeScreen({ navigation, route }) {
   const { theme, toggleTheme, isDarkMode } = useTheme();
@@ -34,6 +36,8 @@ export default function HomeScreen({ navigation, route }) {
   const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState(null);
   const [locationString, setLocationString] = useState('Loading...');
+  const [pendingRecords, setPendingRecords] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const username = route.params?.username || 'Health Worker';
   console.log('HomeScreen - Username from route:', username);
   const slideAnim = useState(new Animated.Value(-300))[0];
@@ -79,6 +83,32 @@ export default function HomeScreen({ navigation, route }) {
       }
     })();
   }, []);
+
+  // Load pending records
+  useEffect(() => {
+    loadPendingRecords();
+    // Set up focus listener to reload pending records when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadPendingRecords();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadPendingRecords = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('pendingChildRecords');
+      if (stored) {
+        const records = JSON.parse(stored);
+        setPendingRecords(records);
+        console.log('Loaded pending records:', records.length);
+      } else {
+        setPendingRecords([]);
+      }
+    } catch (error) {
+      console.error('Error loading pending records:', error);
+      setPendingRecords([]);
+    }
+  };
 
   // Create themed styles
   const themedStyles = createThemedStyles(theme, insets);
@@ -148,6 +178,68 @@ export default function HomeScreen({ navigation, route }) {
     setTimeout(() => navigation.navigate('Login'), 250);
   };
 
+  const uploadAllPendingData = async () => {
+    if (pendingRecords.length === 0) {
+      Alert.alert('No Data', 'No pending records to upload.');
+      return;
+    }
+
+    if (!isOnline) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please check your internet connection and try again.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      console.log('Uploading pending records:', pendingRecords);
+      
+      // Use bulk upload endpoint to upload all pending records at once
+      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
+      
+      console.log('Bulk upload response:', response);
+      
+      // Clear pending records after successful upload
+      await AsyncStorage.removeItem('pendingChildRecords');
+      setPendingRecords([]);
+      
+      // Show detailed results if available
+      let successMessage = `${pendingRecords.length} record(s) uploaded successfully!`;
+      if (response.summary) {
+        successMessage = `Upload Summary:\n• Created: ${response.summary.successful}\n• Updated: ${response.summary.updated}\n• Failed: ${response.summary.failed}\n• Total: ${response.summary.total}`;
+      }
+      
+      Alert.alert('Success', successMessage);
+    } catch (error) {
+      console.error('Error uploading records:', error);
+      
+      let errorMessage = 'Failed to upload some records. Please try again.';
+      
+      if (error.message.includes('Network request failed')) {
+        errorMessage = 'Network connection failed. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Upload timed out. Please try again with a better connection.';
+      } else if (error.message) {
+        errorMessage = `Upload failed: ${error.message}`;
+      }
+      
+      Alert.alert(
+        'Upload Error',
+        errorMessage,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Retry', onPress: () => uploadAllPendingData() }
+        ]
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <View style={themedStyles.container}>
       <StatusBar 
@@ -173,13 +265,93 @@ export default function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
       </View>
 
-      {/* Welcome Message */}
-
       {/* Main Content */}
       <View style={themedStyles.mainContent}>
-        <View style={themedStyles.welcomeContainer}>
-          <Text style={[themedStyles.welcomeSubtitle, { textAlign: 'center' }]}>Good morning {username}</Text>
-        </View>
+        <ScrollView style={themedStyles.contentScrollView} showsVerticalScrollIndicator={false}>
+          <View style={themedStyles.welcomeContainer}>
+            <Text style={themedStyles.welcomeTitle}>Welcome, {username}</Text>
+            
+            {/* Pending Records Section */}
+            <View style={themedStyles.pendingSection}>
+              <View style={themedStyles.pendingSectionHeader}>
+                <Ionicons name="time-outline" size={20} color={theme.primary} />
+                <Text style={themedStyles.pendingSectionTitle}>
+                  Pending Child Records ({pendingRecords.length})
+                </Text>
+              </View>
+              
+              {pendingRecords.length === 0 ? (
+                <View style={themedStyles.noPendingContainer}>
+                  <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
+                  <Text style={themedStyles.noPendingText}>No pending records</Text>
+                  <Text style={themedStyles.noPendingSubtext}>All child registrations are up to date</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={themedStyles.pendingRecordsList}>
+                    {pendingRecords.slice(0, 5).map((record, index) => (
+                      <View key={index} style={themedStyles.pendingRecordItem}>
+                        <View style={themedStyles.recordInfo}>
+                          <Text style={themedStyles.recordName}>{record.childName}</Text>
+                          <Text style={themedStyles.recordDetails}>
+                            Health ID: {record.healthId}
+                          </Text>
+                          <Text style={themedStyles.recordDate}>
+                            {new Date(record.dateCollected).toLocaleDateString()}
+                          </Text>
+                        </View>
+                        <View style={themedStyles.pendingBadge}>
+                          <Text style={themedStyles.pendingBadgeText}>Pending</Text>
+                        </View>
+                      </View>
+                    ))}
+                    
+                    {pendingRecords.length > 5 && (
+                      <Text style={themedStyles.moreRecordsText}>
+                        +{pendingRecords.length - 5} more records...
+                      </Text>
+                    )}
+                  </View>
+                  
+                  {/* Upload All Button */}
+                  <TouchableOpacity
+                    style={[
+                      themedStyles.uploadAllButton,
+                      (!isOnline || isUploading) && themedStyles.uploadAllButtonDisabled
+                    ]}
+                    onPress={uploadAllPendingData}
+                    disabled={!isOnline || isUploading}
+                  >
+                    <View style={themedStyles.uploadAllButtonContent}>
+                      {isUploading ? (
+                        <>
+                          <Ionicons name="sync" size={20} color={theme.whiteText} />
+                          <Text style={themedStyles.uploadAllButtonText}>Uploading...</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Ionicons name="cloud-upload" size={20} color={theme.whiteText} />
+                          <Text style={themedStyles.uploadAllButtonText}>
+                            Upload All Pending Data
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                  
+                  {!isOnline && (
+                    <View style={themedStyles.offlineWarning}>
+                      <Ionicons name="wifi-outline" size={16} color={theme.error} />
+                      <Text style={themedStyles.offlineWarningText}>
+                        No internet connection. Connect to upload data.
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        </ScrollView>
       </View>
 
       {/* Bottom Tab Bar */}
@@ -285,7 +457,7 @@ export default function HomeScreen({ navigation, route }) {
               >
                 <View style={themedStyles.slideMenuItemContent}>
                   <Ionicons name="cloud-upload" size={18} color={theme.primary} />
-                  <Text style={themedStyles.slideMenuItemText}>UPLOAD PENDING CHILD DATA</Text>
+                  <Text style={themedStyles.slideMenuItemText}>VIEW PENDING CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
@@ -854,5 +1026,147 @@ const createThemedStyles = (theme, insets) => StyleSheet.create({
     fontSize: 14,
     color: theme.lightText,
     fontWeight: '500',
+  },
+  // New styles for pending records section
+  contentScrollView: {
+    flex: 1,
+  },
+  welcomeTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: theme.primaryText,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  pendingSection: {
+    backgroundColor: theme.cardBackground,
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pendingSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  pendingSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.primaryText,
+    marginLeft: 8,
+  },
+  noPendingContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noPendingText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.success,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  noPendingSubtext: {
+    fontSize: 14,
+    color: theme.secondaryText,
+    textAlign: 'center',
+  },
+  pendingRecordsList: {
+    marginBottom: 16,
+  },
+  pendingRecordItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: theme.backgroundColor,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  recordInfo: {
+    flex: 1,
+  },
+  recordName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.primaryText,
+    marginBottom: 2,
+  },
+  recordDetails: {
+    fontSize: 12,
+    color: theme.secondaryText,
+    marginBottom: 2,
+  },
+  recordDate: {
+    fontSize: 12,
+    color: theme.lightText,
+  },
+  pendingBadge: {
+    backgroundColor: '#FF9500',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: theme.whiteText,
+  },
+  moreRecordsText: {
+    fontSize: 14,
+    color: theme.secondaryText,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  uploadAllButton: {
+    backgroundColor: theme.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 8,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  uploadAllButtonDisabled: {
+    backgroundColor: theme.lightText,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  uploadAllButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadAllButtonText: {
+    color: theme.whiteText,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  offlineWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: '#FFE6E6',
+    borderRadius: 8,
+  },
+  offlineWarningText: {
+    color: theme.error,
+    fontSize: 12,
+    marginLeft: 6,
+    textAlign: 'center',
   },
 });

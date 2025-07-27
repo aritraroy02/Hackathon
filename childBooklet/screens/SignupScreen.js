@@ -27,6 +27,7 @@ export default function SignupScreen({ navigation, route }) {
   const [pendingRecords, setPendingRecords] = useState([]);
   const [showUploadPrompt, setShowUploadPrompt] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   
   // Form state
   const [step, setStep] = useState(1);
@@ -328,7 +329,13 @@ const handleSubmit = async () => {
       return;
     }
 
+    // Prevent multiple submissions
+    if (isSaving || hasSubmitted) {
+      return;
+    }
+
     setIsSaving(true);
+    setHasSubmitted(true);
 
     try {
       // Get current location before submitting
@@ -358,13 +365,14 @@ const handleSubmit = async () => {
         healthId,
         localId,
         dateCollected: new Date().toISOString(),
-        isOffline: !isConnected,
+        isOffline: true, // Always mark as offline/pending
         location: locationData, // Add location data to the record
         healthWorkerUsername: healthWorkerUsername, // Add health worker username
         registeredBy: healthWorkerUsername, // Alternative field name for clarity
+        isPending: true, // Mark as pending for upload
       };
       
-      console.log('Complete record being sent to MongoDB:', JSON.stringify(record, null, 2));
+      console.log('Complete record being saved locally:', JSON.stringify(record, null, 2));
 
       // Update formData with the generated healthId and localId
       setFormData(prevData => ({
@@ -372,65 +380,32 @@ const handleSubmit = async () => {
         healthId,
         localId,
         dateCollected: new Date().toISOString(),
-        isOffline: !isConnected,
+        isOffline: true,
+        isPending: true,
       }));
 
-      if (isConnected) {
-        try {
-          const response = await makeRequest(API_ENDPOINTS.CHILDREN, 'POST', record);
-          if (response.success) {
-            Alert.alert(
-              'Success',
-              `Child record saved successfully!\n\nHealth ID: ${healthId}\n\nPlease share this Health ID with the child's family for future reference.`,
-              [
-                {
-                  text: 'Share Health ID',
-                  onPress: () => shareHealthId(healthId),
-                },
-                {
-                  text: 'Continue',
-                  onPress: () => setStep(4),
-                },
-              ]
-            );
-          } else {
-            throw new Error('Failed to save record');
-          }
-        } catch (error) {
-          console.error('API Error:', error);
-          // If API call fails, save offline
-          const saved = await saveRecordOffline(record);
-          if (saved) {
-            Alert.alert(
-              'Saved Offline',
-              `Failed to save online. Record saved locally!\n\nHealth ID: ${healthId}\n\nThe record will be uploaded when internet connection is restored.`,
-              [{ text: 'OK', onPress: () => setStep(4) }]
-            );
-          } else {
-            Alert.alert('Error', 'Failed to save record. Please try again.');
-          }
-        }
+      // Always save locally first (never upload to MongoDB on submit)
+      const saved = await saveRecordOffline(record);
+      if (saved) {
+        Alert.alert(
+          'Registration Saved',
+          `Child record saved locally and pending upload!\n\nHealth ID: ${healthId}\n\nThe record will be uploaded to the database when you choose to upload pending data from the home screen.\n\nPlease share this Health ID with the child's family for future reference.`,
+          [
+            {
+              text: 'Share Health ID',
+              onPress: () => {
+                shareHealthId(healthId);
+                setStep(4);
+              },
+            },
+            {
+              text: 'Continue',
+              onPress: () => setStep(4),
+            },
+          ]
+        );
       } else {
-        // Save offline
-        const saved = await saveRecordOffline(record);
-        if (saved) {
-          Alert.alert(
-            'Saved Offline',
-            `Child record saved locally!\n\nHealth ID: ${healthId}\n\nThe record will be uploaded when internet connection is restored.\n\nPlease share this Health ID with the child's family for future reference.`,
-            [
-              {
-                text: 'Share Health ID',
-                onPress: () => shareHealthId(healthId),
-              },
-              {
-                text: 'Continue',
-                onPress: () => setStep(4),
-              },
-            ]
-          );
-        } else {
-          Alert.alert('Error', 'Failed to save record. Please try again.');
-        }
+        Alert.alert('Error', 'Failed to save record. Please try again.');
       }
     } catch (error) {
       console.error('Error saving record:', error);
@@ -521,6 +496,8 @@ const handleSubmit = async () => {
     setInches('');
     setCustomRelation('');
     setPhoneError('');
+    setHasSubmitted(false);
+    setIsSaving(false);
   };
 
   const reviewEntries = Object.entries(formData).filter(([k]) => !['childImage'].includes(k));
@@ -874,12 +851,17 @@ const handleSubmit = async () => {
                 <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                   <Text style={styles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.submitButton, !formData.parentsConsent && styles.submitButtonDisabled]} 
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton,
+                    (!formData.parentsConsent || isSaving || hasSubmitted) && styles.submitButtonDisabled
+                  ]}
                   onPress={handleSubmit}
-                  disabled={!formData.parentsConsent}
+                  disabled={!formData.parentsConsent || isSaving || hasSubmitted}
                 >
-                  <Text style={styles.submitButtonText}>Submit Registration</Text>
+                  <Text style={styles.submitButtonText}>
+                    {hasSubmitted ? 'Already Submitted' : (isSaving ? 'Submitting...' : 'Submit Registration')}
+                  </Text>
                 </TouchableOpacity>
               </View>
         </>
@@ -914,9 +896,19 @@ const handleSubmit = async () => {
             
             <TouchableOpacity
               style={styles.continueButton}
+              onPress={() => {
+                resetForm();
+                setStep(1);
+              }}
+            >
+              <Text style={styles.continueButtonText}>Register Another Child</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.continueButton, { backgroundColor: '#666', marginTop: 8 }]}
               onPress={() => navigation.navigate('Login')}
             >
-              <Text style={styles.continueButtonText}>Continue to Login</Text>
+              <Text style={styles.continueButtonText}>Back to Home</Text>
             </TouchableOpacity>
           </View>
         </View>

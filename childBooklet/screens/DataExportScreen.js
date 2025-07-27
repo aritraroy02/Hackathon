@@ -932,40 +932,7 @@ const generatePDF = async () => {
         </View>
       )}
 
-      {/* Data Summary */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Data Summary</Text>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryText}>
-            Child: {userData.childName}
-          </Text>
-          <Text style={styles.summaryText}>Health ID: {userData.healthId}</Text>
-          <Text style={styles.summaryText}>Age: {userData.age} years</Text>
-          <Text style={styles.summaryText}>Gender: {userData.gender}</Text>
-          <Text style={styles.summaryText}>Weight: {userData.weight}kg</Text>
-          <Text style={styles.summaryText}>Height: {userData.height}cm</Text>
-          <Text style={styles.summaryText}>Guardian: {userData.guardianName} ({userData.relation})</Text>
-          <Text style={styles.summaryText}>Phone: {userData.countryCode} {userData.phone}</Text>
-          {userData.idType === 'local' && userData.localId && (
-            <Text style={styles.summaryText}>Local ID: {userData.localId}</Text>
-          )}
-          {userData.idType === 'aadhar' && userData.aadharNumber && (
-            <Text style={styles.summaryText}>Aadhar: {userData.aadharNumber}</Text>
-          )}
-          {!userData.skipMalnutrition && userData.malnutritionSigns && (
-            <Text style={styles.summaryText}>Malnutrition Signs: {userData.malnutritionSigns}</Text>
-          )}
-          {!userData.skipIllnesses && userData.recentIllnesses && (
-            <Text style={styles.summaryText}>Recent Illnesses: {userData.recentIllnesses}</Text>
-          )}
-          <Text style={styles.summaryText}>
-            Data Collected: {new Date(userData.dateCollected).toLocaleDateString()}
-          </Text>
-          <Text style={styles.summaryText}>
-            Status: {userData.isOffline ? 'Offline' : 'Online'}
-          </Text>
-        </View>
-      </View>
+      
 
       <TouchableOpacity
         style={styles.backButton}
