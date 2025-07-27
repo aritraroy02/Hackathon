@@ -133,7 +133,7 @@ export default function LoginScreen({ navigation }) {
 
   const handleContinue = () => {
     setShowSuccessModal(false);
-    navigation.navigate('Home');
+    navigation.navigate('Home', { username: userId });
   };
 
   const animateButtonPress = () => {

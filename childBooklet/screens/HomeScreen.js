@@ -21,7 +21,7 @@ import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function HomeScreen({ navigation }) {
+export default function HomeScreen({ navigation, route }) {
   const { theme, toggleTheme, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   
@@ -34,7 +34,8 @@ export default function HomeScreen({ navigation }) {
   const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState(null);
   const [locationString, setLocationString] = useState('Loading...');
-  const [userName] = useState('Health Worker');
+  const username = route.params?.username || 'Health Worker';
+  console.log('HomeScreen - Username from route:', username);
   const slideAnim = useState(new Animated.Value(-300))[0];
   const overlayOpacity = useState(new Animated.Value(0))[0];
 
@@ -172,16 +173,21 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
+      {/* Welcome Message */}
+
       {/* Main Content */}
       <View style={themedStyles.mainContent}>
         <View style={themedStyles.welcomeContainer}>
-          <Text style={themedStyles.welcomeSubtitle}>Use the menu to navigate through the app</Text>
+          <Text style={[themedStyles.welcomeSubtitle, { textAlign: 'center' }]}>Good morning {username}</Text>
         </View>
       </View>
 
       {/* Bottom Tab Bar */}
       <View style={themedStyles.bottomTabBar}>
-        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('Signup')}>
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => {
+          console.log('HomeScreen - Navigating to Signup with username:', username);
+          navigation.navigate('Signup', { username: username });
+        }}>
           <View style={themedStyles.tabIconContainer}>
             <Ionicons name="person-add" size={18} color={theme.primary} />
           </View>
@@ -331,7 +337,7 @@ export default function HomeScreen({ navigation }) {
             <View style={themedStyles.modalBody}>
               <View style={themedStyles.profileDetailRow}>
                 <Text style={themedStyles.profileLabel}>Name:</Text>
-                <Text style={themedStyles.profileValue}>{userName}</Text>
+                <Text style={themedStyles.profileValue}>{username}</Text>
               </View>
               
               <View style={themedStyles.profileDetailRow}>
@@ -458,21 +464,6 @@ export default function HomeScreen({ navigation }) {
                   />
                 </View>
                 
-                <View style={themedStyles.settingRow}>
-                  <View style={themedStyles.settingInfo}>
-                    <Ionicons name="cloud-offline-outline" size={20} color={theme.primary} />
-                    <View style={themedStyles.settingTextContainer}>
-                      <Text style={themedStyles.settingLabel}>Offline Mode</Text>
-                      <Text style={themedStyles.settingDescription}>Enable offline data collection</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    trackColor={{ false: theme.border, true: theme.primary }}
-                    thumbColor={offlineModeEnabled ? theme.whiteText : '#F4F3F4'}
-                    onValueChange={setOfflineModeEnabled}
-                    value={offlineModeEnabled}
-                  />
-                </View>
               </View>
 
               {/* Storage & Privacy Section */}

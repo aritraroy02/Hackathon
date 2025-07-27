@@ -25,6 +25,10 @@ const childSchema = new mongoose.Schema({
   dateCollected: { type: Date, default: Date.now },
   isOffline: { type: Boolean, default: false },
   
+  // Health worker information
+  healthWorkerUsername: { type: String },
+  registeredBy: { type: String },
+  
   // Location data (captured when data is uploaded)
   location: {
     latitude: { type: Number },
@@ -33,7 +37,8 @@ const childSchema = new mongoose.Schema({
     city: { type: String },
     state: { type: String },
     accuracy: { type: Number },
-    timestamp: { type: Date }
+    timestamp: { type: Date },
+    error: { type: String }
   }
 });
 

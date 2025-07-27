@@ -21,7 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 
-export default function SignupScreen({ navigation }) {
+export default function SignupScreen({ navigation, route }) {
   // Network connectivity state
   const [isConnected, setIsConnected] = useState(true);
   const [pendingRecords, setPendingRecords] = useState([]);
@@ -41,6 +41,13 @@ export default function SignupScreen({ navigation }) {
   const [customRelation, setCustomRelation] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState('');
+  
+  // Get username from route parameters (health worker who is registering)
+  const healthWorkerUsername = route?.params?.username || 'Unknown Health Worker';
+  
+  // Debug logging
+  console.log('SignupScreen - Route params:', route?.params);
+  console.log('SignupScreen - Health worker username:', healthWorkerUsername);
 
   const [formData, setFormData] = useState({
     childName: '',
@@ -325,7 +332,23 @@ const handleSubmit = async () => {
 
     try {
       // Get current location before submitting
-      const locationData = await getCurrentLocation();
+      let locationData = await getCurrentLocation();
+      console.log('Location data captured:', locationData);
+      
+      // If location capture failed, create a fallback location object
+      if (!locationData) {
+        locationData = {
+          latitude: null,
+          longitude: null,
+          address: 'Location not available',
+          city: 'Unknown',
+          state: 'Unknown',
+          accuracy: null,
+          timestamp: new Date(),
+          error: 'Location capture failed'
+        };
+        console.log('Using fallback location data:', locationData);
+      }
       
       const healthId = generateHealthId();
       const localId = formData.localId || generateLocalId();
@@ -337,7 +360,11 @@ const handleSubmit = async () => {
         dateCollected: new Date().toISOString(),
         isOffline: !isConnected,
         location: locationData, // Add location data to the record
+        healthWorkerUsername: healthWorkerUsername, // Add health worker username
+        registeredBy: healthWorkerUsername, // Alternative field name for clarity
       };
+      
+      console.log('Complete record being sent to MongoDB:', JSON.stringify(record, null, 2));
 
       // Update formData with the generated healthId and localId
       setFormData(prevData => ({
@@ -503,6 +530,7 @@ const handleSubmit = async () => {
       {step === 1 && (
         <>
           <Text style={styles.heading}>Step 1: Child Info</Text>
+          <Text style={styles.healthWorkerInfo}>Registered by: {healthWorkerUsername}</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Child's Full Name</Text>
@@ -910,6 +938,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  healthWorkerInfo: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 15,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   input: {
     backgroundColor: '#fff',
