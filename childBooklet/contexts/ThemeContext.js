@@ -6,18 +6,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const lightTheme = {
   // Background colors
   backgroundColor: '#F8F9FA',
-  cardBackground: '#FFFFFF',
+  cardBackground: '#f7f7f7ff',
   modalBackground: '#FFFFFF',
   headerBackground: '#FFFFFF',
   
   // Text colors
-  primaryText: '#2D5016',
-  secondaryText: '#666666',
-  lightText: '#999999',
-  whiteText: '#FFFFFF',
+  primaryText: '#000000ff',
+  secondaryText: '#000000ff',
+  lightText: '#000000ff',
+  whiteText: '#ffffffff',
   
   // Brand colors
-  primary: '#4A7C59',
+  primary: '#37aee2ff',
   primaryLight: '#E6F0E6',
   primaryDark: '#2D5016',
   
@@ -32,8 +32,8 @@ const lightTheme = {
   info: '#2196F3',
   
   // Border and separator colors
-  border: '#E0E0E0',
-  separator: '#E8E8E8',
+  border: '#ffffffff',
+  separator: '#000000ff',
   
   // Shadow colors
   shadow: '#000000',
@@ -44,8 +44,8 @@ const lightTheme = {
   overlayLight: 'rgba(0, 0, 0, 0.3)',
   
   // Tab and button colors
-  tabBackground: '#F8F9FA',
-  buttonBackground: '#4A7C59',
+  tabBackground: '#ffffffff',
+  buttonBackground: '#070707ff',
   
   // Status bar
   statusBarStyle: 'dark-content',
@@ -61,8 +61,8 @@ const darkTheme = {
   
   // Text colors
   primaryText: '#FFFFFF',
-  secondaryText: '#B3B3B3',
-  lightText: '#8A8A8A',
+  secondaryText: '#fcfcfcff',
+  lightText: '#ffffffff',
   whiteText: '#FFFFFF',
   
   // Brand colors (adjusted for dark mode)

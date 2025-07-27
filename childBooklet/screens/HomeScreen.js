@@ -19,9 +19,11 @@ import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import { BlurView } from 'expo-blur';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function HomeScreen({ navigation }) {
   const { theme, toggleTheme, isDarkMode } = useTheme();
+  const insets = useSafeAreaInsets();
   
   const [modalVisible, setModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
@@ -35,14 +37,6 @@ export default function HomeScreen({ navigation }) {
   const [userName] = useState('Health Worker');
   const slideAnim = useState(new Animated.Value(-300))[0];
   const overlayOpacity = useState(new Animated.Value(0))[0];
-  const [statusBarHeight, setStatusBarHeight] = useState(0);
-
-  // Get status bar height
-  useEffect(() => {
-    if (Platform.OS === 'android') {
-      setStatusBarHeight(StatusBar.currentHeight || 0);
-    }
-  }, []);
 
   // Check internet connectivity
   useEffect(() => {
@@ -86,7 +80,7 @@ export default function HomeScreen({ navigation }) {
   }, []);
 
   // Create themed styles
-  const themedStyles = createThemedStyles(theme);
+  const themedStyles = createThemedStyles(theme, insets);
 
   // Toggle hamburger menu with optimized animation
   const toggleMenu = () => {
@@ -154,13 +148,12 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={themedStyles.container}>
+    <View style={themedStyles.container}>
       <StatusBar 
         barStyle={theme.statusBarStyle} 
         backgroundColor={theme.primary} 
         translucent={false} 
       />
-      
       
       {/* Header with Hamburger Menu */}
       <View style={themedStyles.headerContainer}>
@@ -531,36 +524,20 @@ export default function HomeScreen({ navigation }) {
                   <Text style={themedStyles.versionText}>v1.0.0</Text>
                 </TouchableOpacity>
               </View>
-              
-              {/* Sign Out Button */}
-              <TouchableOpacity
-                style={[themedStyles.logoutButton, { marginTop: 30, marginBottom: 20 }]}
-                onPress={() => {
-                  setSettingsModalVisible(false);
-                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Sign Out', onPress: () => navigation.navigate('Login') }
-                  ]);
-                }}
-              >
-                <View style={themedStyles.logoutButtonContent}>
-                  <Ionicons name="log-out" size={16} color={theme.whiteText} />
-                  <Text style={themedStyles.logoutButtonText}>Sign Out</Text>
-                </View>
-              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 // Function to create themed styles
-const createThemedStyles = (theme) => StyleSheet.create({
+const createThemedStyles = (theme, insets) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.backgroundColor,
+    paddingTop: insets.top, // This ensures content starts below status bar
   },
   // Header Styles
   headerContainer: {
@@ -572,8 +549,6 @@ const createThemedStyles = (theme) => StyleSheet.create({
     backgroundColor: theme.headerBackground,
     borderBottomWidth: 1,
     borderBottomColor: theme.border,
-    // Ensure header extends to status bar on Android
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 15 : 15,
   },
   hamburgerButton: {
     padding: 10,
@@ -619,6 +594,7 @@ const createThemedStyles = (theme) => StyleSheet.create({
     borderTopColor: theme.border,
     paddingVertical: 10,
     paddingHorizontal: 10,
+    paddingBottom: Math.max(insets.bottom, 10), // Respect safe area at bottom
     shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
@@ -648,7 +624,7 @@ const createThemedStyles = (theme) => StyleSheet.create({
   // Slide Menu Styles
   menuOverlay: {
     position: 'absolute',
-    top: 0,
+    top: insets.top, // Start below the status bar/notch
     left: 0,
     right: 0,
     bottom: 0,
@@ -699,10 +675,9 @@ const createThemedStyles = (theme) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 20 : 20,
+    paddingTop: 20, // Remove the extra insets.top since menuOverlay already handles it
     backgroundColor: theme.primary,
-    // Ensure the green header extends to the very top
-    minHeight: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 60 : 60,
+    minHeight: 60, // Fixed minimum height
   },
   slideMenuTitle: {
     fontSize: 20,
