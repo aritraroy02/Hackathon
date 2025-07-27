@@ -178,6 +178,20 @@ export default function HomeScreen({ navigation, route }) {
     setTimeout(() => navigation.navigate('Login'), 250);
   };
 
+  const checkESignetAuth = async () => {
+    try {
+      const authData = await AsyncStorage.getItem('eSignetAuthData');
+      if (authData) {
+        const parsedAuth = JSON.parse(authData);
+        return parsedAuth.isAuthenticated;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking eSignet auth:', error);
+      return false;
+    }
+  };
+
   const uploadAllPendingData = async () => {
     if (pendingRecords.length === 0) {
       Alert.alert('No Data', 'No pending records to upload.');
@@ -193,6 +207,23 @@ export default function HomeScreen({ navigation, route }) {
       return;
     }
 
+    // Check eSignet authentication
+    const isAuthenticated = await checkESignetAuth();
+    if (!isAuthenticated) {
+      Alert.alert(
+        'Authentication Required',
+        'You must authenticate with eSignet using your national ID before uploading data.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Authenticate',
+            onPress: () => navigation.navigate('ESignetAuth', { returnTo: 'Home' })
+          }
+        ]
+      );
+      return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -202,6 +233,23 @@ export default function HomeScreen({ navigation, route }) {
       const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
       
       console.log('Bulk upload response:', response);
+      
+      // Mark records as uploaded and store them in uploaded records
+      const uploadedRecords = pendingRecords.map(record => ({
+        ...record,
+        isUploaded: true,
+        uploadedAt: new Date().toISOString(),
+        isPending: false,
+      }));
+      
+      // Get existing uploaded records
+      const existingUploaded = await AsyncStorage.getItem('uploadedChildRecords');
+      const allUploadedRecords = existingUploaded ?
+        [...JSON.parse(existingUploaded), ...uploadedRecords] :
+        uploadedRecords;
+      
+      // Store uploaded records
+      await AsyncStorage.setItem('uploadedChildRecords', JSON.stringify(allUploadedRecords));
       
       // Clear pending records after successful upload
       await AsyncStorage.removeItem('pendingChildRecords');
@@ -366,11 +414,18 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={themedStyles.tabLabel}>Register</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('DataExport')}>
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('ViewRecords')}>
           <View style={themedStyles.tabIconContainer}>
             <Ionicons name="eye" size={18} color={theme.primary} />
           </View>
           <Text style={themedStyles.tabLabel}>View</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('Profile')}>
+          <View style={themedStyles.tabIconContainer}>
+            <Ionicons name="person" size={18} color={theme.primary} />
+          </View>
+          <Text style={themedStyles.tabLabel}>Profile</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={themedStyles.tabItem} onPress={() => setSettingsModalVisible(true)}>

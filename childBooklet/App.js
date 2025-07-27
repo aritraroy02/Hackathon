@@ -6,6 +6,9 @@ import LoginScreen from './screens/LoginScreen';
 import SignupScreen from './screens/SignupScreen';
 import DataExportScreen from './screens/DataExportScreen';
 import HomeScreen from './screens/HomeScreen';
+import ESignetAuthScreen from './screens/ESignetAuthScreen';
+import ViewRecordsScreen from './screens/ViewRecordsScreen';
+import ProfileScreen from './screens/ProfileScreen';
 import { ThemeProvider } from './contexts/ThemeContext';
 
 const Stack = createNativeStackNavigator();
@@ -15,21 +18,36 @@ export default function App() {
     <ThemeProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Login">
-          <Stack.Screen 
-            name="Home" 
-            component={HomeScreen} 
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }}/>
-          <Stack.Screen 
-            name="Signup" 
-            component={SignupScreen} 
+          <Stack.Screen
+            name="Signup"
+            component={SignupScreen}
             options={{ title: 'Register User' }}
           />
-          <Stack.Screen 
-            name="DataExport" 
-            component={DataExportScreen} 
+          <Stack.Screen
+            name="DataExport"
+            component={DataExportScreen}
             options={{ title: 'Data Export & Sharing' }}
+          />
+          <Stack.Screen
+            name="ESignetAuth"
+            component={ESignetAuthScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ViewRecords"
+            component={ViewRecordsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+            options={{ headerShown: false }}
           />
         </Stack.Navigator>
       </NavigationContainer>
