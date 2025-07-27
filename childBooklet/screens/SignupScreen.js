@@ -19,6 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import RNPickerSelect from 'react-native-picker-select';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import * as Location from 'expo-location';
 
 export default function SignupScreen({ navigation }) {
   // Network connectivity state
@@ -38,6 +39,8 @@ export default function SignupScreen({ navigation }) {
   const [errors, setErrors] = useState({});
   const [phoneError, setPhoneError] = useState('');
   const [customRelation, setCustomRelation] = useState('');
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationError, setLocationError] = useState('');
 
   const [formData, setFormData] = useState({
     childName: '',
@@ -100,6 +103,67 @@ export default function SignupScreen({ navigation }) {
   const generateLocalId = () => {
     const timestamp = Date.now().toString();
     return `LOC${timestamp.slice(-6)}`;
+  };
+
+  // Function to get current location
+  const getCurrentLocation = async () => {
+    try {
+      setLocationError('');
+      
+      // Request location permissions
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationError('Location permission denied');
+        return null;
+      }
+
+      // Get current position
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+        timeout: 10000,
+        maximumAge: 60000, // Cache for 1 minute
+      });
+      
+      // Reverse geocoding to get address
+      let address = '';
+      let city = '';
+      let state = '';
+      
+      try {
+        const reverseGeocode = await Location.reverseGeocodeAsync({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+        
+        if (reverseGeocode.length > 0) {
+          const addressData = reverseGeocode[0];
+          city = addressData.city || addressData.district || 'Unknown City';
+          state = addressData.region || addressData.state || 'Unknown State';
+          address = `${addressData.street || ''} ${addressData.streetNumber || ''}, ${city}, ${state}`.trim();
+        }
+      } catch (geocodeError) {
+        console.warn('Reverse geocoding failed:', geocodeError);
+        address = `${location.coords.latitude.toFixed(6)}, ${location.coords.longitude.toFixed(6)}`;
+      }
+      
+      const locationData = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        address: address,
+        city: city,
+        state: state,
+        accuracy: location.coords.accuracy,
+        timestamp: new Date()
+      };
+      
+      setCurrentLocation(locationData);
+      return locationData;
+      
+    } catch (error) {
+      console.error('Error getting location:', error);
+      setLocationError('Unable to get location');
+      return null;
+    }
   };
 
   const handleChange = (key, value) => {
@@ -260,6 +324,9 @@ const handleSubmit = async () => {
     setIsSaving(true);
 
     try {
+      // Get current location before submitting
+      const locationData = await getCurrentLocation();
+      
       const healthId = generateHealthId();
       const localId = formData.localId || generateLocalId();
       
@@ -269,6 +336,7 @@ const handleSubmit = async () => {
         localId,
         dateCollected: new Date().toISOString(),
         isOffline: !isConnected,
+        location: locationData, // Add location data to the record
       };
 
       // Update formData with the generated healthId and localId

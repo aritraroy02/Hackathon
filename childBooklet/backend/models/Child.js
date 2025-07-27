@@ -23,7 +23,18 @@ const childSchema = new mongoose.Schema({
   skipMalnutrition: { type: Boolean, default: false },
   skipIllnesses: { type: Boolean, default: false },
   dateCollected: { type: Date, default: Date.now },
-  isOffline: { type: Boolean, default: false }
+  isOffline: { type: Boolean, default: false },
+  
+  // Location data (captured when data is uploaded)
+  location: {
+    latitude: { type: Number },
+    longitude: { type: Number },
+    address: { type: String },
+    city: { type: String },
+    state: { type: String },
+    accuracy: { type: Number },
+    timestamp: { type: Date }
+  }
 });
 
 module.exports = mongoose.model('Child', childSchema);
