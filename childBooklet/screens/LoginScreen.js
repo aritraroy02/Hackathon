@@ -333,8 +333,12 @@ export default function LoginScreen({ navigation }) {
             ]}
           >
             <View style={styles.successIconContainer}>
-              <Text style={styles.successIcon}>✅</Text>
-            </View>
+  <Image
+    source={require('../assets/checking.gif')}
+    style={styles.successIcon}   // ↓ new style
+  />
+</View>
+
             <Text style={styles.modalTitle}>Login Successful</Text>
             <Text style={styles.modalSubtitle}>Welcome back! 👋</Text>
             <TouchableOpacity style={styles.continueButton} onPress={handleContinue}>
@@ -546,18 +550,25 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     elevation: 10,
   },
-  successIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#4CAF50',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  successIcon: {
-    fontSize: 40,
-  },
+
+  // styles.js
+successIconContainer: {
+  width: 60,
+  height: 60,
+  borderRadius: 30,
+  backgroundColor: '#4CAF50',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 20,
+  overflow: 'hidden',   // clips anything that sticks out
+},
+successIcon: {
+  width: 80,
+  height: 80,
+  borderRadius: 40,     // keeps the GIF itself circular
+  resizeMode: 'contain' // or 'cover' if you prefer
+},
+
   modalTitle: {
     fontSize: 24,
     fontWeight: '600',
