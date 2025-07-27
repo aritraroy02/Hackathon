@@ -25,6 +25,8 @@
     "expo-linear-gradient": "^14.1.5",
     "expo-location": "^18.1.6",
     "expo-modules-core": "~2.5.0",
+    "expo-print": "^14.1.4",
+    "expo-sharing": "^13.1.5",
     "expo-status-bar": "~2.2.3",
     "express": "^5.1.0",
     "mongoose": "^8.16.4",

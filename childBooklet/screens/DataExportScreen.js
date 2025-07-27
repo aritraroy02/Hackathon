@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
+import * as Print from 'expo-print';
+import { shareAsync } from 'expo-sharing';
 
 export default function DataExportScreen({ route, navigation }) {
   const [isExporting, setIsExporting] = useState(false);
@@ -171,16 +173,595 @@ export default function DataExportScreen({ route, navigation }) {
     }
   };
 
-  const handleShare = async () => {
-    try {
-      const shareData = {
-        title: 'Child Health Data',
-        message: `Child Health Data for ${userData.childName}\n\nHealth ID: ${userData.healthId}\nAge: ${userData.age} years\nGender: ${userData.gender}\nWeight: ${userData.weight}kg\nHeight: ${userData.height}cm\nGuardian: ${userData.guardianName} (${userData.relation})\nPhone: ${userData.countryCode} ${userData.phone}\nDate Collected: ${new Date(userData.dateCollected).toLocaleDateString()}`,
-      };
+const generatePDF = async () => {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Child Health Assessment Form</title>
+          <style>
+            @page {
+              size: A4;
+              margin: 8mm;
+            }
+            body {
+              font-family: 'Arial', sans-serif;
+              margin: 0;
+              padding: 0;
+              font-size: 9px;
+              line-height: 1.2;
+              color: #1a365d;
+              background: linear-gradient(135deg, #ffffff 0%, #e6f3ff 25%, #cce7ff 50%, #b3dbff 75%, #87ceeb 100%);
+              height: 100vh;
+              overflow: hidden;
+            }
+            .form-container {
+              width: 100%;
+              max-width: 100%;
+              background: linear-gradient(135deg, #ffffff 0%, #f8fbff 50%, #e8f4fd 100%);
+              border: 2px solid #4a90e2;
+              border-radius: 8px;
+              padding: 10px;
+              box-shadow: 0 5px 20px rgba(74, 144, 226, 0.15);
+              position: relative;
+              overflow: hidden;
+              height: calc(100vh - 16mm);
+              page-break-inside: avoid;
+            }
+            .form-container::before {
+              content: '';
+              position: absolute;
+              top: -50%;
+              left: -50%;
+              width: 200%;
+              height: 200%;
+              background: radial-gradient(circle, rgba(135, 206, 235, 0.1) 0%, transparent 70%);
+              animation: pulse 4s ease-in-out infinite;
+              pointer-events: none;
+            }
+            @keyframes pulse {
+              0%, 100% { opacity: 0.3; transform: scale(1); }
+              50% { opacity: 0.1; transform: scale(1.1); }
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 12px;
+              background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+              color: white;
+              padding: 10px;
+              border-radius: 8px;
+              position: relative;
+              box-shadow: 0 3px 10px rgba(74, 144, 226, 0.3);
+            }
+            .header::after {
+              content: '';
+              position: absolute;
+              bottom: -10px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 0;
+              height: 0;
+              border-left: 15px solid transparent;
+              border-right: 15px solid transparent;
+              border-top: 10px solid #357abd;
+            }
+            .hospital-name {
+              font-size: 14px;
+              font-weight: bold;
+              margin: 0;
+              text-transform: uppercase;
+              text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+              letter-spacing: 0.5px;
+            }
+            .form-title {
+              font-size: 12px;
+              font-weight: bold;
+              margin: 4px 0 2px 0;
+              color: #e6f3ff;
+            }
+            .form-subtitle {
+              font-size: 8px;
+              margin: 0;
+              font-style: italic;
+              color: #b3dbff;
+            }
+            .main-content {
+              display: flex;
+              gap: 15px;
+              width: 100%;
+            }
+            .left-section {
+              flex: 2.2;
+              min-width: 0;
+            }
+            .right-section {
+              flex: 0.8;
+              max-width: 180px;
+              min-width: 160px;
+            }
+            .section-title {
+              font-size: 10px;
+              font-weight: bold;
+              margin: 8px 0 6px 0;
+              padding: 6px 12px;
+              background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+              color: white;
+              text-align: center;
+              text-transform: uppercase;
+              border-radius: 15px;
+              box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+              position: relative;
+              letter-spacing: 0.3px;
+              transition: all 0.3s ease;
+            }
+            .section-title::before {
+              content: '';
+              position: absolute;
+              left: 15px;
+              top: 50%;
+              transform: translateY(-50%);
+              width: 6px;
+              height: 6px;
+              background: white;
+              border-radius: 50%;
+            }
+            .section-title::after {
+              content: '';
+              position: absolute;
+              right: 15px;
+              top: 50%;
+              transform: translateY(-50%);
+              width: 6px;
+              height: 6px;
+              background: white;
+              border-radius: 50%;
+            }
+            .form-row {
+              display: flex;
+              margin-bottom: 6px;
+              align-items: center;
+              padding: 3px;
+              border-radius: 4px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(232,244,253,0.5) 100%);
+              border: 1px solid rgba(74, 144, 226, 0.2);
+              transition: all 0.3s ease;
+            }
+            .form-row:hover {
+              background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(232,244,253,0.8) 100%);
+              border-color: rgba(74, 144, 226, 0.4);
+              transform: translateY(-1px);
+              box-shadow: 0 3px 10px rgba(74, 144, 226, 0.15);
+            }
+            .form-row-double {
+              display: flex;
+              gap: 12px;
+              margin-bottom: 6px;
+              padding: 3px;
+              border-radius: 4px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(232,244,253,0.5) 100%);
+              border: 1px solid rgba(74, 144, 226, 0.2);
+              transition: all 0.3s ease;
+            }
+            .form-row-double:hover {
+              background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(232,244,253,0.8) 100%);
+              border-color: rgba(74, 144, 226, 0.4);
+              transform: translateY(-1px);
+              box-shadow: 0 3px 10px rgba(74, 144, 226, 0.15);
+            }
+            .form-field {
+              display: flex;
+              align-items: center;
+              flex: 1;
+            }
+            .field-label {
+              font-weight: bold;
+              margin-right: 6px;
+              min-width: 80px;
+              color: #2d5aa0;
+              font-size: 9px;
+            }
+            .field-value {
+              border-bottom: 1px solid #4a90e2;
+              padding: 2px 6px;
+              min-width: 100px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,251,255,0.9) 100%);
+              border-radius: 3px;
+              color: #1a365d;
+              font-weight: 500;
+              transition: all 0.3s ease;
+              font-size: 9px;
+            }
+            .field-value:hover {
+              background: rgba(255,255,255,1);
+              box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+            }
+            .checkbox-field {
+              display: flex;
+              align-items: center;
+              margin-right: 20px;
+            }
+            .checkbox {
+              width: 18px;
+              height: 18px;
+              border: 2px solid #4a90e2;
+              border-radius: 4px;
+              margin-right: 8px;
+              display: inline-block;
+              text-align: center;
+              line-height: 14px;
+              font-weight: bold;
+              background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 100%);
+              transition: all 0.3s ease;
+            }
+            .checkbox.checked {
+              background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+              color: white;
+              box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+              transform: scale(1.1);
+            }
+            .photo-box {
+              width: 120px;
+              height: 140px;
+              border: 2px solid #4a90e2;
+              border-radius: 6px;
+              margin: 5px auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: linear-gradient(135deg, #ffffff 0%, #f0f8ff 50%, #e6f3ff 100%);
+              box-shadow: 0 2px 10px rgba(74, 144, 226, 0.2);
+              transition: all 0.3s ease;
+              position: relative;
+              overflow: hidden;
+            }
+            .photo-box::before {
+              content: '';
+              position: absolute;
+              top: -2px;
+              left: -2px;
+              right: -2px;
+              bottom: -2px;
+              background: linear-gradient(45deg, #4a90e2, #87ceeb, #4a90e2);
+              border-radius: 15px;
+              z-index: -1;
+              animation: borderGlow 3s ease-in-out infinite;
+            }
+            @keyframes borderGlow {
+              0%, 100% { opacity: 0.5; }
+              50% { opacity: 1; }
+            }
+            .photo-box img {
+              max-width: 110px;
+              max-height: 130px;
+              object-fit: cover;
+              border-radius: 4px;
+              transition: all 0.3s ease;
+            }
+            .photo-box img:hover {
+              transform: scale(1.02);
+            }
+            .photo-placeholder {
+              text-align: center;
+              color: #4a90e2;
+              font-style: italic;
+              font-weight: bold;
+              background: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(135, 206, 235, 0.1) 100%);
+              padding: 20px;
+              border-radius: 8px;
+              border: 2px dashed #87ceeb;
+            }
+            .signature-section {
+              margin-top: 8px;
+              display: flex;
+              justify-content: space-between;
+              gap: 15px;
+            }
+            .signature-box {
+              width: 160px;
+              text-align: center;
+              background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,248,255,0.9) 100%);
+              padding: 8px;
+              border-radius: 6px;
+              border: 1px solid rgba(74, 144, 226, 0.3);
+              box-shadow: 0 2px 10px rgba(74, 144, 226, 0.15);
+              transition: all 0.3s ease;
+            }
+            .signature-box:hover {
+              transform: translateY(-2px);
+              box-shadow: 0 5px 20px rgba(74, 144, 226, 0.25);
+            }
+            .signature-line {
+              border-bottom: 2px solid #4a90e2;
+              height: 50px;
+              margin-bottom: 8px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(248,251,255,0.8) 100%);
+              border-radius: 4px;
+              position: relative;
+            }
+            .signature-line::after {
+              content: '✍️';
+              position: absolute;
+              right: 10px;
+              bottom: 5px;
+              font-size: 16px;
+              opacity: 0.3;
+            }
+            .notes-section {
+              margin-top: 25px;
+              padding: 15px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,248,255,0.9) 100%);
+              border-radius: 12px;
+              border: 2px solid rgba(74, 144, 226, 0.3);
+            }
+            .notes-area {
+              width: 100%;
+              height: 100px;
+              border: 2px solid #87ceeb;
+              border-radius: 8px;
+              padding: 10px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,251,255,0.95) 100%);
+              font-family: 'Arial', sans-serif;
+              font-size: 12px;
+              line-height: 1.5;
+              color: #1a365d;
+              resize: none;
+              transition: all 0.3s ease;
+            }
+            .notes-area:focus {
+              outline: none;
+              border-color: #4a90e2;
+              box-shadow: 0 0 15px rgba(74, 144, 226, 0.3);
+            }
+            .form-footer {
+              margin-top: 25px;
+              background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+              color: white;
+              padding: 15px;
+              border-radius: 12px;
+              font-size: 10px;
+              text-align: center;
+              box-shadow: 0 3px 15px rgba(74, 144, 226, 0.3);
+              position: relative;
+            }
+            .form-footer::before {
+              content: '🏥';
+              position: absolute;
+              left: 20px;
+              top: 50%;
+              transform: translateY(-50%);
+              font-size: 16px;
+            }
+            .form-footer::after {
+              content: '📋';
+              position: absolute;
+              right: 20px;
+              top: 50%;
+              transform: translateY(-50%);
+              font-size: 16px;
+            }
+            .health-assessment-box {
+              margin-bottom: 8px;
+              padding: 6px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,248,255,0.9) 100%);
+              border-radius: 6px;
+              border: 1px solid rgba(74, 144, 226, 0.3);
+              transition: all 0.3s ease;
+            }
+            .health-assessment-box:hover {
+              border-color: rgba(74, 144, 226, 0.5);
+              box-shadow: 0 3px 15px rgba(74, 144, 226, 0.15);
+            }
+            .assessment-title {
+              font-weight: bold;
+              margin-bottom: 4px;
+              color: #2d5aa0;
+              font-size: 8px;
+              display: flex;
+              align-items: center;
+            }
+            .assessment-title::before {
+              content: '📝';
+              margin-right: 4px;
+              font-size: 8px;
+            }
+            .assessment-content {
+              border: 1px solid #87ceeb;
+              border-radius: 4px;
+              padding: 6px;
+              min-height: 25px;
+              background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,251,255,0.95) 100%);
+              color: #1a365d;
+              font-size: 8px;
+              line-height: 1.2;
+              transition: all 0.3s ease;
+            }
+            .assessment-content.not-assessed {
+              background: linear-gradient(135deg, rgba(240,240,240,0.8) 0%, rgba(248,248,248,0.8) 100%);
+              color: #666;
+              font-style: italic;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="form-container">
+            <!-- Header -->
+            <div class="header">
+              <h1 class="hospital-name">Child Health Assessment Center</h1>
+              <h2 class="form-title">Pediatric Health Evaluation Form</h2>
+              <p class="form-subtitle">Confidential Medical Record - For Healthcare Professional Use Only</p>
+            </div>
 
-      await Share.share(shareData);
+            <!-- Patient Information Section -->
+            <div class="section-title">📄 Patient Information</div>
+            
+            <div class="main-content">
+              <div class="left-section">
+                <div class="form-row-double">
+                  <div class="form-field">
+                    <span class="field-label">Health ID:</span>
+                    <span class="field-value">${userData.healthId || '___________________'}</span>
+                  </div>
+                  <div class="form-field">
+                    <span class="field-label">Date:</span>
+                    <span class="field-value">${new Date(userData.dateCollected).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <span class="field-label">Patient Name:</span>
+                    <span class="field-value">${userData.childName || '___________________________________________________'}</span>
+                  </div>
+                </div>
+
+                <div class="form-row-double">
+                  <div class="form-field">
+                    <span class="field-label">Age:</span>
+                    <span class="field-value">${userData.age || '______'} years</span>
+                  </div>
+                  <div class="form-field">
+                    <span class="field-label">Gender:</span>
+                    <div class="checkbox-field">
+                      <span class="checkbox ${userData.gender === 'Male' ? 'checked' : ''}">${userData.gender === 'Male' ? '✓' : ''}</span>
+                      <span>Male</span>
+                    </div>
+                    <div class="checkbox-field">
+                      <span class="checkbox ${userData.gender === 'Female' ? 'checked' : ''}">${userData.gender === 'Female' ? '✓' : ''}</span>
+                      <span>Female</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-field">
+                    <span class="field-label">Guardian/Parent:</span>
+                    <span class="field-value">${userData.guardianName || '___________________________________________________'}</span>
+                  </div>
+                </div>
+
+                <div class="form-row-double">
+                  <div class="form-field">
+                    <span class="field-label">Relation:</span>
+                    <span class="field-value">${userData.relation || '___________________'}</span>
+                  </div>
+                  <div class="form-field">
+                    <span class="field-label">Phone:</span>
+                    <span class="field-value">${userData.countryCode || '+91'} ${userData.phone || '___________________'}</span>
+                  </div>
+                </div>
+
+                ${userData.idType && userData.localId ? `
+                <div class="form-row">
+                  <div class="form-field">
+                    <span class="field-label">${userData.idType === 'aadhar' ? 'Aadhar Number:' : 'Local ID Number:'}</span>
+                    <span class="field-value">${userData.localId}</span>
+                  </div>
+                </div>
+                ` : ''}
+              </div>
+
+              <div class="right-section">
+                <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">PATIENT PHOTO</div>
+                <div class="photo-box">
+                  ${userData.facePhoto ? 
+                    `<img src="${userData.facePhoto}" alt="Patient Photo" />` : 
+                    `<div class="photo-placeholder">AFFIX<br>RECENT<br>PHOTOGRAPH<br>HERE</div>`
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Physical Assessment Section -->
+            <div class="section-title">📏 Physical Assessment</div>
+            
+            <div class="form-row-double">
+              <div class="form-field">
+                <span class="field-label">Weight:</span>
+                <span class="field-value">${userData.weight || '______'} kg</span>
+              </div>
+              <div class="form-field">
+                <span class="field-label">Height:</span>
+                <span class="field-value">${userData.height || '______'} cm</span>
+              </div>
+            </div>
+
+            <!-- Health Assessment Section -->
+            <div class="section-title">🩺 Health Assessment</div>
+            
+            <div class="health-assessment-box">
+              <div class="assessment-title">Recent Illnesses/Medical Conditions:</div>
+              <div class="assessment-content ${userData.skipIllnesses ? 'not-assessed' : ''}">
+                ${userData.skipIllnesses ? 'Not Assessed' : (userData.recentIllnesses || 'None reported at time of assessment')}
+              </div>
+            </div>
+
+            <div class="health-assessment-box">
+              <div class="assessment-title">Malnutrition Signs/Observations:</div>
+              <div class="assessment-content ${userData.skipMalnutrition ? 'not-assessed' : ''}">
+                ${userData.skipMalnutrition ? 'Not Assessed' : (userData.malnutritionSigns || 'No visible signs of malnutrition observed')}
+              </div>
+            </div>
+
+            <!-- Consent Section -->
+            <div class="section-title">📜 Legal Consent</div>
+            
+            <div class="form-row">
+              <span class="field-label">Parental/Guardian Consent for Assessment:</span>
+              <div class="checkbox-field">
+                <span class="checkbox ${userData.parentsConsent ? 'checked' : ''}">${userData.parentsConsent ? '✓' : ''}</span>
+                <span>Yes, consent given</span>
+              </div>
+              <div class="checkbox-field">
+                <span class="checkbox ${!userData.parentsConsent ? 'checked' : ''}">${!userData.parentsConsent ? '✓' : ''}</span>
+                <span>No, consent not given</span>
+              </div>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="notes-section">
+              <div style="font-weight: bold; margin-bottom: 8px;">Additional Notes/Observations:</div>
+              <div class="notes-area"></div>
+            </div>
+
+            <!-- Signature Section -->
+            <div class="signature-section">
+              <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Healthcare Professional Signature</div>
+                <div style="font-size: 10px;">Date: ${new Date().toLocaleDateString()}</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-line"></div>
+                <div>Guardian/Parent Signature</div>
+                <div style="font-size: 10px;">Date: ${new Date().toLocaleDateString()}</div>
+              </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="form-footer">
+              <div>Form ID: CHF-${userData.healthId || 'XXXX'} | Generated: ${new Date().toLocaleString()}</div>
+              <div style="margin-top: 5px;">This document contains confidential medical information. Handle in accordance with HIPAA guidelines.</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      
+      // Share the generated PDF
+      await shareAsync(uri, {
+        UTI: '.pdf',
+        mimeType: 'application/pdf',
+      });
+      
+      Alert.alert('PDF Generated', 'Child health report has been generated and is ready to share!');
     } catch (error) {
-      Alert.alert('Share Error', 'Failed to share data: ' + error.message);
+      console.error('PDF generation error:', error);
+      Alert.alert('Export Error', 'Failed to generate PDF: ' + error.message);
     }
   };
 
@@ -268,14 +849,14 @@ export default function DataExportScreen({ route, navigation }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📱 Share Data</Text>
         <Text style={styles.sectionDescription}>
-          Share basic health information with healthcare providers
+          Generate and share a PDF document with child's health information and photo
         </Text>
 
         <TouchableOpacity
           style={[styles.actionButton, styles.shareButton]}
-          onPress={handleShare}
+          onPress={generatePDF}
         >
-          <Text style={styles.actionButtonText}>Share Summary</Text>
+          <Text style={styles.actionButtonText}>Generate PDF Report</Text>
         </TouchableOpacity>
       </View>
 
