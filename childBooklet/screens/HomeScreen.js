@@ -12,19 +12,27 @@ import {
   StatusBar,
   Platform,
   Dimensions,
+  Switch,
 } from 'react-native';
 import { Ionicons, MaterialIcons, Feather } from '@expo/vector-icons';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function HomeScreen({ navigation }) {
+  const { theme, toggleTheme, isDarkMode } = useTheme();
+  
   const [modalVisible, setModalVisible] = useState(false);
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
+  const [offlineModeEnabled, setOfflineModeEnabled] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [location, setLocation] = useState(null);
   const [locationString, setLocationString] = useState('Loading...');
-  const [userName] = useState('Health Worker'); // This can be passed from login later
+  const [userName] = useState('Health Worker');
   const slideAnim = useState(new Animated.Value(-300))[0];
   const overlayOpacity = useState(new Animated.Value(0))[0];
   const [statusBarHeight, setStatusBarHeight] = useState(0);
@@ -76,6 +84,9 @@ export default function HomeScreen({ navigation }) {
       }
     })();
   }, []);
+
+  // Create themed styles
+  const themedStyles = createThemedStyles(theme);
 
   // Toggle hamburger menu with optimized animation
   const toggleMenu = () => {
@@ -143,74 +154,76 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={themedStyles.container}>
       <StatusBar 
-        barStyle="dark-content" 
-        backgroundColor="#FFFFFF" 
+        barStyle={theme.statusBarStyle} 
+        backgroundColor={theme.statusBarBackground} 
         translucent={false} 
       />
+      
       {/* Status Bar Spacer for Android */}
-      {Platform.OS === 'android' && <View style={{ height: statusBarHeight, backgroundColor: '#FFFFFF' }} />}
+      {Platform.OS === 'android' && <View style={{ height: statusBarHeight, backgroundColor: theme.headerBackground }} />}
+      
       {/* Header with Hamburger Menu */}
-      <View style={styles.headerContainer}>
+      <View style={themedStyles.headerContainer}>
         <TouchableOpacity 
-          style={styles.hamburgerButton} 
+          style={themedStyles.hamburgerButton} 
           onPress={toggleMenu}
           accessibilityLabel="Open navigation menu"
           accessibilityRole="button"
         >
-          <Ionicons name="menu" size={24} color="#4A7C59" />
+          <Ionicons name="menu" size={24} color={theme.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.profileButton} onPress={() => setModalVisible(true)}>
-          <View style={styles.profileCircle}>
-            <Ionicons name="person" size={20} color="#FFFFFF" />
+        <TouchableOpacity style={themedStyles.profileButton} onPress={() => setModalVisible(true)}>
+          <View style={themedStyles.profileCircle}>
+            <Ionicons name="person" size={20} color={theme.whiteText} />
           </View>
         </TouchableOpacity>
       </View>
 
-      {/* Main Content - Empty for now */}
-      <View style={styles.mainContent}>
-        <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeSubtitle}>Use the menu to navigate through the app</Text>
+      {/* Main Content */}
+      <View style={themedStyles.mainContent}>
+        <View style={themedStyles.welcomeContainer}>
+          <Text style={themedStyles.welcomeSubtitle}>Use the menu to navigate through the app</Text>
         </View>
       </View>
 
       {/* Bottom Tab Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('Signup')}>
-          <View style={styles.tabIconContainer}>
-            <Ionicons name="person-add" size={18} color="#4A7C59" />
+      <View style={themedStyles.bottomTabBar}>
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('Signup')}>
+          <View style={themedStyles.tabIconContainer}>
+            <Ionicons name="person-add" size={18} color={theme.primary} />
           </View>
-          <Text style={styles.tabLabel}>Register</Text>
+          <Text style={themedStyles.tabLabel}>Register</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem} onPress={() => navigation.navigate('DataExport')}>
-          <View style={styles.tabIconContainer}>
-            <Ionicons name="eye" size={18} color="#4A7C59" />
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('DataExport')}>
+          <View style={themedStyles.tabIconContainer}>
+            <Ionicons name="eye" size={18} color={theme.primary} />
           </View>
-          <Text style={styles.tabLabel}>View</Text>
+          <Text style={themedStyles.tabLabel}>View</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.tabItem} onPress={() => setModalVisible(true)}>
-          <View style={styles.tabIconContainer}>
-            <Ionicons name="settings" size={18} color="#4A7C59" />
+        <TouchableOpacity style={themedStyles.tabItem} onPress={() => setSettingsModalVisible(true)}>
+          <View style={themedStyles.tabIconContainer}>
+            <Ionicons name="settings" size={18} color={theme.primary} />
           </View>
-          <Text style={styles.tabLabel}>Settings</Text>
+          <Text style={themedStyles.tabLabel}>Settings</Text>
         </TouchableOpacity>
       </View>
 
       {/* Slide-out Menu */}
       {menuVisible && (
-        <View style={styles.menuOverlay}>
-          <BlurView intensity={80} tint="dark" style={styles.blurOverlay}>
+        <View style={themedStyles.menuOverlay}>
+          <BlurView intensity={80} tint={isDarkMode ? "dark" : "light"} style={themedStyles.blurOverlay}>
             <Animated.View 
               style={[
-                styles.overlayTouchable,
+                themedStyles.overlayTouchable,
                 { opacity: overlayOpacity }
               ]}
             >
               <TouchableOpacity 
-                style={styles.overlayTouchableArea}
+                style={themedStyles.overlayTouchableArea}
                 activeOpacity={1} 
                 onPress={toggleMenu}
               />
@@ -218,93 +231,92 @@ export default function HomeScreen({ navigation }) {
           </BlurView>
           <Animated.View 
             style={[
-              styles.slideMenu,
+              themedStyles.slideMenu,
               { transform: [{ translateX: slideAnim }] }
             ]}
           >
-            <View style={styles.slideMenuHeader}>
-              <Text style={styles.slideMenuTitle}>Menu</Text>
+            <View style={themedStyles.slideMenuHeader}>
+              <Text style={themedStyles.slideMenuTitle}>Menu</Text>
               <TouchableOpacity 
                 onPress={toggleMenu}
                 accessibilityLabel="Close navigation menu"
                 accessibilityRole="button"
-                style={styles.closeMenuButton}
+                style={themedStyles.closeMenuButton}
               >
-                <Text style={styles.closeMenuText}>×</Text>
+                <Text style={themedStyles.closeMenuText}>×</Text>
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.slideMenuContent} showsVerticalScrollIndicator={false}>
+            <ScrollView style={themedStyles.slideMenuContent} showsVerticalScrollIndicator={false}>
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleViewChildData}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="bar-chart" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>VIEW CHILD DATA</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="bar-chart" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>VIEW CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleExportChildData}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="document-text" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>EXPORT CHILD DATA</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="document-text" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>EXPORT CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleNearestHub}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="location" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>NEAREST HUB</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="location" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>NEAREST HUB</Text>
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleUploadPendingData}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="cloud-upload" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>UPLOAD PENDING CHILD DATA</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="cloud-upload" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>UPLOAD PENDING CHILD DATA</Text>
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleContactUs}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="call" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>CONTACT US</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="call" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>CONTACT US</Text>
                 </View>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.slideMenuItem} 
+                style={themedStyles.slideMenuItem} 
                 onPress={handleLogout}
                 activeOpacity={0.7}
               >
-                <View style={styles.slideMenuItemContent}>
-                  <Ionicons name="log-out" size={18} color="#4A7C59" />
-                  <Text style={styles.slideMenuItemText}>LOGOUT</Text>
+                <View style={themedStyles.slideMenuItemContent}>
+                  <Ionicons name="log-out" size={18} color={theme.primary} />
+                  <Text style={themedStyles.slideMenuItemText}>LOGOUT</Text>
                 </View>
               </TouchableOpacity>
             </ScrollView>
           </Animated.View>
         </View>
       )}
-
 
       {/* Profile Modal */}
       <Modal
@@ -313,43 +325,43 @@ export default function HomeScreen({ navigation }) {
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Profile Information</Text>
+        <View style={themedStyles.modalOverlay}>
+          <View style={themedStyles.modalContent}>
+            <View style={themedStyles.modalHeader}>
+              <Text style={themedStyles.modalTitle}>Profile Information</Text>
               <TouchableOpacity
-                style={styles.closeButton}
+                style={themedStyles.closeButton}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>×</Text>
+                <Text style={themedStyles.closeButtonText}>×</Text>
               </TouchableOpacity>
             </View>
             
-            <View style={styles.modalBody}>
-              <View style={styles.profileDetailRow}>
-                <Text style={styles.profileLabel}>Name:</Text>
-                <Text style={styles.profileValue}>{userName}</Text>
+            <View style={themedStyles.modalBody}>
+              <View style={themedStyles.profileDetailRow}>
+                <Text style={themedStyles.profileLabel}>Name:</Text>
+                <Text style={themedStyles.profileValue}>{userName}</Text>
               </View>
               
-              <View style={styles.profileDetailRow}>
-                <Text style={styles.profileLabel}>Location:</Text>
-                <Text style={styles.profileValue}>{locationString}</Text>
+              <View style={themedStyles.profileDetailRow}>
+                <Text style={themedStyles.profileLabel}>Location:</Text>
+                <Text style={themedStyles.profileValue}>{locationString}</Text>
               </View>
               
-              <View style={styles.profileDetailRow}>
-                <Text style={styles.profileLabel}>Online Status:</Text>
-                <View style={styles.statusRow}>
-                  <View style={[styles.statusDot, { backgroundColor: isOnline ? '#4CAF50' : '#F44336' }]} />
-                  <Text style={[styles.profileValue, { color: isOnline ? '#4CAF50' : '#F44336' }]}>
+              <View style={themedStyles.profileDetailRow}>
+                <Text style={themedStyles.profileLabel}>Online Status:</Text>
+                <View style={themedStyles.statusRow}>
+                  <View style={[themedStyles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
+                  <Text style={[themedStyles.profileValue, { color: isOnline ? theme.success : theme.error }]}>
                     {isOnline ? 'Connected' : 'Disconnected'}
                   </Text>
                 </View>
               </View>
               
               {location && (
-                <View style={styles.profileDetailRow}>
-                  <Text style={styles.profileLabel}>Coordinates:</Text>
-                  <Text style={styles.profileValue}>
+                <View style={themedStyles.profileDetailRow}>
+                  <Text style={themedStyles.profileLabel}>Coordinates:</Text>
+                  <Text style={themedStyles.profileValue}>
                     {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
                   </Text>
                 </View>
@@ -357,18 +369,188 @@ export default function HomeScreen({ navigation }) {
               
               {/* Logout Button */}
               <TouchableOpacity
-                style={styles.logoutButton}
+                style={themedStyles.logoutButton}
                 onPress={() => {
                   setModalVisible(false);
                   navigation.navigate('Login');
                 }}
               >
-                <View style={styles.logoutButtonContent}>
-                  <Ionicons name="log-out" size={16} color="#FFFFFF" />
-                  <Text style={styles.logoutButtonText}>Logout</Text>
+                <View style={themedStyles.logoutButtonContent}>
+                  <Ionicons name="log-out" size={16} color={theme.whiteText} />
+                  <Text style={themedStyles.logoutButtonText}>Logout</Text>
                 </View>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Settings Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={settingsModalVisible}
+        onRequestClose={() => setSettingsModalVisible(false)}
+      >
+        <View style={themedStyles.modalOverlay}>
+          <View style={[themedStyles.modalContent, { maxWidth: 380, minHeight: 500 }]}>
+            <View style={themedStyles.modalHeader}>
+              <Text style={themedStyles.modalTitle}>App Settings</Text>
+              <TouchableOpacity
+                style={themedStyles.closeButton}
+                onPress={() => setSettingsModalVisible(false)}
+              >
+                <Text style={themedStyles.closeButtonText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={themedStyles.modalBody} showsVerticalScrollIndicator={false}>
+              {/* Notifications Section */}
+              <View style={themedStyles.settingsSection}>
+                <Text style={themedStyles.sectionTitle}>Notifications</Text>
+                
+                <View style={themedStyles.settingRow}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="notifications-outline" size={20} color={theme.primary} />
+                    <View style={themedStyles.settingTextContainer}>
+                      <Text style={themedStyles.settingLabel}>Push Notifications</Text>
+                      <Text style={themedStyles.settingDescription}>Receive alerts and reminders</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    trackColor={{ false: theme.border, true: theme.primary }}
+                    thumbColor={notificationsEnabled ? theme.whiteText : '#F4F3F4'}
+                    onValueChange={setNotificationsEnabled}
+                    value={notificationsEnabled}
+                  />
+                </View>
+              </View>
+
+              {/* Appearance Section */}
+              <View style={themedStyles.settingsSection}>
+                <Text style={themedStyles.sectionTitle}>Appearance</Text>
+                
+                <View style={themedStyles.settingRow}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name={isDarkMode ? "moon" : "moon-outline"} size={20} color={theme.primary} />
+                    <View style={themedStyles.settingTextContainer}>
+                      <Text style={themedStyles.settingLabel}>Dark Mode</Text>
+                      <Text style={themedStyles.settingDescription}>Use dark theme</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    trackColor={{ false: theme.border, true: theme.primary }}
+                    thumbColor={isDarkMode ? theme.whiteText : '#F4F3F4'}
+                    onValueChange={toggleTheme}
+                    value={isDarkMode}
+                  />
+                </View>
+              </View>
+
+              {/* Data & Sync Section */}
+              <View style={themedStyles.settingsSection}>
+                <Text style={themedStyles.sectionTitle}>Data & Sync</Text>
+                
+                <View style={themedStyles.settingRow}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="sync-outline" size={20} color={theme.primary} />
+                    <View style={themedStyles.settingTextContainer}>
+                      <Text style={themedStyles.settingLabel}>Auto Sync</Text>
+                      <Text style={themedStyles.settingDescription}>Automatically sync data when online</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    trackColor={{ false: theme.border, true: theme.primary }}
+                    thumbColor={autoSyncEnabled ? theme.whiteText : '#F4F3F4'}
+                    onValueChange={setAutoSyncEnabled}
+                    value={autoSyncEnabled}
+                  />
+                </View>
+                
+                <View style={themedStyles.settingRow}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="cloud-offline-outline" size={20} color={theme.primary} />
+                    <View style={themedStyles.settingTextContainer}>
+                      <Text style={themedStyles.settingLabel}>Offline Mode</Text>
+                      <Text style={themedStyles.settingDescription}>Enable offline data collection</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    trackColor={{ false: theme.border, true: theme.primary }}
+                    thumbColor={offlineModeEnabled ? theme.whiteText : '#F4F3F4'}
+                    onValueChange={setOfflineModeEnabled}
+                    value={offlineModeEnabled}
+                  />
+                </View>
+              </View>
+
+              {/* Storage & Privacy Section */}
+              <View style={themedStyles.settingsSection}>
+                <Text style={themedStyles.sectionTitle}>Storage & Privacy</Text>
+                
+                <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Clear Cache', 'Cache cleared successfully!')}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="trash-outline" size={20} color={theme.primary} />
+                    <Text style={themedStyles.settingLabel}>Clear Cache</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Export Data', 'Data export initiated...')}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="download-outline" size={20} color={theme.primary} />
+                    <Text style={themedStyles.settingLabel}>Export Data</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Privacy Policy', 'Opening privacy policy...')}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="shield-checkmark-outline" size={20} color={theme.primary} />
+                    <Text style={themedStyles.settingLabel}>Privacy Policy</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
+                </TouchableOpacity>
+              </View>
+
+              {/* About Section */}
+              <View style={themedStyles.settingsSection}>
+                <Text style={themedStyles.sectionTitle}>About</Text>
+                
+                <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('Help & Support', 'Opening help center...')}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="help-circle-outline" size={20} color={theme.primary} />
+                    <Text style={themedStyles.settingLabel}>Help & Support</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.lightText} />
+                </TouchableOpacity>
+                
+                <TouchableOpacity style={themedStyles.settingButton} onPress={() => Alert.alert('App Version', 'Child Health Tracker v1.0.0')}>
+                  <View style={themedStyles.settingInfo}>
+                    <Ionicons name="information-circle-outline" size={20} color={theme.primary} />
+                    <Text style={themedStyles.settingLabel}>App Version</Text>
+                  </View>
+                  <Text style={themedStyles.versionText}>v1.0.0</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Sign Out Button */}
+              <TouchableOpacity
+                style={[themedStyles.logoutButton, { marginTop: 30, marginBottom: 20 }]}
+                onPress={() => {
+                  setSettingsModalVisible(false);
+                  Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Sign Out', onPress: () => navigation.navigate('Login') }
+                  ]);
+                }}
+              >
+                <View style={themedStyles.logoutButtonContent}>
+                  <Ionicons name="log-out" size={16} color={theme.whiteText} />
+                  <Text style={themedStyles.logoutButtonText}>Sign Out</Text>
+                </View>
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -376,10 +558,11 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+// Function to create themed styles
+const createThemedStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.backgroundColor,
   },
   // Header Styles
   headerContainer: {
@@ -388,10 +571,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    paddingTop: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.headerBackground,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.border,
   },
   hamburgerButton: {
     padding: 10,
@@ -401,11 +583,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  hamburgerText: {
-    fontSize: 24,
-    color: '#4A7C59',
-    fontWeight: 'bold',
-  },
   profileButton: {
     padding: 5,
   },
@@ -413,14 +590,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#4A7C59',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   // Main Content Styles
   mainContent: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -428,28 +605,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  welcomeTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4A7C59',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: theme.secondaryText,
     textAlign: 'center',
     lineHeight: 24,
   },
   // Bottom Tab Bar Styles
   bottomTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.cardBackground,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: theme.border,
     paddingVertical: 10,
     paddingHorizontal: 10,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -464,17 +634,14 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: theme.tabBackground,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
-  tabIcon: {
-    fontSize: 18,
-  },
   tabLabel: {
     fontSize: 12,
-    color: '#4A7C59',
+    color: theme.primary,
     fontWeight: '500',
     textAlign: 'center',
   },
@@ -519,8 +686,8 @@ const styles = StyleSheet.create({
     top: 0,
     width: 300,
     height: '100%',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
+    backgroundColor: theme.cardBackground,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -533,35 +700,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#4A7C59',
+    backgroundColor: theme.primary,
   },
   slideMenuTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: theme.whiteText,
   },
   closeMenuText: {
     fontSize: 30,
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontWeight: 'bold',
   },
   slideMenuContent: {
     flex: 1,
   },
   slideMenuItem: {
-    backgroundColor: '#E6F0E6',
+    backgroundColor: theme.primaryLight,
     marginVertical: 6,
     marginHorizontal: 12,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,
-    shadowColor: '#4A7C59',
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(74, 124, 89, 0.1)',
+    borderColor: theme.border,
   },
   slideMenuItemContent: {
     flexDirection: 'row',
@@ -569,51 +736,24 @@ const styles = StyleSheet.create({
   },
   slideMenuItemText: {
     fontSize: 16,
-    color: '#4A7C59',
+    color: theme.primary,
     fontWeight: '500',
     marginLeft: 12,
-  },
-  profileIconText: {
-    fontSize: 24,
-    color: '#FFFFFF',
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  profileName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2D5016',
-    marginBottom: 4,
-  },
-  onlineStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
   },
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: theme.overlay,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.modalBackground,
     borderRadius: 16,
     margin: 20,
     minWidth: 300,
     maxWidth: 350,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -626,19 +766,19 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
+    borderBottomColor: theme.separator,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2D5016',
+    color: theme.primaryText,
   },
   closeButton: {
     padding: 5,
   },
   closeButtonText: {
     fontSize: 24,
-    color: '#666',
+    color: theme.secondaryText,
     fontWeight: 'bold',
   },
   modalBody: {
@@ -650,25 +790,31 @@ const styles = StyleSheet.create({
   profileLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4A7C59',
+    color: theme.primary,
     marginBottom: 4,
   },
   profileValue: {
     fontSize: 16,
-    color: '#2D5016',
+    color: theme.primaryText,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
   // Logout Button Styles
   logoutButton: {
-    backgroundColor: '#FF4444',
+    backgroundColor: theme.error,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     marginTop: 20,
-    shadowColor: '#FF4444',
+    shadowColor: theme.error,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -680,9 +826,65 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoutButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  // Settings Modal Styles
+  settingsSection: {
+    marginBottom: 25,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: theme.primary,
+    marginBottom: 15,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.separator,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+  },
+  settingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: theme.primaryText,
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: theme.secondaryText,
+    lineHeight: 18,
+  },
+  settingButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 4,
+    marginBottom: 8,
+    borderRadius: 8,
+    backgroundColor: theme.tabBackground,
+  },
+  versionText: {
+    fontSize: 14,
+    color: theme.lightText,
+    fontWeight: '500',
   },
 });
