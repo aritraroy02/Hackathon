@@ -234,7 +234,14 @@ export default function ProfileScreen({ navigation }) {
         <View style={themedStyles.section}>
           <Text style={themedStyles.sectionTitle}>Address</Text>
           <View style={themedStyles.infoCard}>
-            <Text style={themedStyles.addressText}>{userProfile.address}</Text>
+            <Text style={themedStyles.addressText}>
+              {typeof userProfile.address === 'string' 
+                ? userProfile.address 
+                : userProfile.address 
+                  ? `${userProfile.address.locality || ''} ${userProfile.address.region || ''} ${userProfile.address.postal_code || ''} ${userProfile.address.country || ''}`.trim()
+                  : 'Address not available'
+              }
+            </Text>
           </View>
         </View>
 
