@@ -179,6 +179,7 @@ export default function ESignetAuthScreen({ navigation, route }) {
       const authData = {
         isAuthenticated: true,
         uinNumber: cleanUIN,
+        username: userData.name, // Store username for easy access
         accessToken: `mock_access_token_${Date.now()}`,
         refreshToken: `mock_refresh_token_${Date.now()}`,
         tokenType: 'Bearer',
