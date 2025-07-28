@@ -369,6 +369,7 @@ export default function HomeScreen({ navigation, route }) {
         >
           <Ionicons name="menu" size={24} color={theme.primary} />
         </TouchableOpacity>
+        <View style={themedStyles.headerSpacer} />
         <TouchableOpacity 
           style={themedStyles.profileButton} 
           onPress={() => navigation.navigate('Profile')}
@@ -379,7 +380,6 @@ export default function HomeScreen({ navigation, route }) {
             <Ionicons name="person" size={20} color={theme.whiteText} />
           </View>
         </TouchableOpacity>
-        <View style={themedStyles.headerSpacer} />
       </View>
 
       {/* Main Content */}
