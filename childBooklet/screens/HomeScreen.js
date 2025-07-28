@@ -27,7 +27,6 @@ export default function HomeScreen({ navigation, route }) {
   const { theme, toggleTheme, isDarkMode } = useTheme();
   const insets = useSafeAreaInsets();
   
-  const [modalVisible, setModalVisible] = useState(false);
   const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
@@ -38,6 +37,8 @@ export default function HomeScreen({ navigation, route }) {
   const [locationString, setLocationString] = useState('Loading...');
   const [pendingRecords, setPendingRecords] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [greetingMessage, setGreetingMessage] = useState('Good Morning, User');
   const username = route.params?.username || 'Health Worker';
   console.log('HomeScreen - Username from route:', username);
   const slideAnim = useState(new Animated.Value(-300))[0];
@@ -84,15 +85,22 @@ export default function HomeScreen({ navigation, route }) {
     })();
   }, []);
 
-  // Load pending records
+  // Load pending records and greeting message
   useEffect(() => {
     loadPendingRecords();
+    loadGreetingMessage();
     // Set up focus listener to reload pending records when screen comes into focus
     const unsubscribe = navigation.addListener('focus', () => {
       loadPendingRecords();
+      loadGreetingMessage();
     });
     return unsubscribe;
   }, [navigation]);
+
+  const loadGreetingMessage = async () => {
+    const message = await getGreetingMessage();
+    setGreetingMessage(message);
+  };
 
   const loadPendingRecords = async () => {
     try {
@@ -192,6 +200,35 @@ export default function HomeScreen({ navigation, route }) {
     }
   };
 
+  // Function to get time-based greeting
+  const getTimeBasedGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      return 'Good Morning';
+    } else if (hour < 17) {
+      return 'Good Afternoon';
+    } else {
+      return 'Good Evening';
+    }
+  };
+
+  // Function to get authenticated username or default
+  const getGreetingMessage = async () => {
+    try {
+      const authData = await AsyncStorage.getItem('eSignetAuthData');
+      if (authData) {
+        const parsedAuth = JSON.parse(authData);
+        if (parsedAuth.isAuthenticated && parsedAuth.username) {
+          return `${getTimeBasedGreeting()}, ${parsedAuth.username}`;
+        }
+      }
+      return `${getTimeBasedGreeting()}, User`;
+    } catch (error) {
+      console.error('Error getting greeting message:', error);
+      return `${getTimeBasedGreeting()}, User`;
+    }
+  };
+
   const uploadAllPendingData = async () => {
     if (pendingRecords.length === 0) {
       Alert.alert('No Data', 'No pending records to upload.');
@@ -212,7 +249,7 @@ export default function HomeScreen({ navigation, route }) {
     if (!isAuthenticated) {
       Alert.alert(
         'Authentication Required',
-        'You must authenticate with eSignet using your national ID before uploading data.',
+        'You must authenticate with Mock MOSIP ID before uploading data.',
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -229,8 +266,35 @@ export default function HomeScreen({ navigation, route }) {
     try {
       console.log('Uploading pending records:', pendingRecords);
       
+      // Get authenticated username for upload
+      let uploadUsername = 'healthworker'; // default fallback
+      try {
+        const authData = await AsyncStorage.getItem('eSignetAuthData');
+        console.log('Upload - Retrieved auth data:', authData);
+        if (authData) {
+          const parsedAuth = JSON.parse(authData);
+          console.log('Upload - Parsed auth data:', parsedAuth);
+          if (parsedAuth.isAuthenticated && parsedAuth.username) {
+            uploadUsername = parsedAuth.username;
+            console.log('Upload - Using authenticated username:', uploadUsername);
+          } else {
+            console.log('Upload - Auth data exists but user not authenticated or no username');
+          }
+        } else {
+          console.log('Upload - No auth data found in AsyncStorage');
+        }
+      } catch (authError) {
+        console.error('Error getting auth username for upload:', authError);
+      }
+      
+      // Add healthWorkerUsername field to all records (matches backend schema)
+      const recordsWithUploader = pendingRecords.map(record => ({
+        ...record,
+        healthWorkerUsername: uploadUsername
+      }));
+      
       // Use bulk upload endpoint to upload all pending records at once
-      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
+      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', recordsWithUploader);
       
       console.log('Bulk upload response:', response);
       
@@ -296,7 +360,7 @@ export default function HomeScreen({ navigation, route }) {
         translucent={false} 
       />
       
-      {/* Header with Hamburger Menu */}
+      {/* Header with Hamburger Menu and Profile Button */}
       <View style={themedStyles.headerContainer}>
         <TouchableOpacity 
           style={themedStyles.hamburgerButton} 
@@ -306,18 +370,24 @@ export default function HomeScreen({ navigation, route }) {
         >
           <Ionicons name="menu" size={24} color={theme.primary} />
         </TouchableOpacity>
-        <TouchableOpacity style={themedStyles.profileButton} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity 
+          style={themedStyles.profileButton} 
+          onPress={() => setProfileModalVisible(true)}
+          accessibilityLabel="Open profile"
+          accessibilityRole="button"
+        >
           <View style={themedStyles.profileCircle}>
             <Ionicons name="person" size={20} color={theme.whiteText} />
           </View>
         </TouchableOpacity>
+        <View style={themedStyles.headerSpacer} />
       </View>
 
       {/* Main Content */}
       <View style={themedStyles.mainContent}>
         <ScrollView style={themedStyles.contentScrollView} showsVerticalScrollIndicator={false}>
           <View style={themedStyles.welcomeContainer}>
-            <Text style={themedStyles.welcomeTitle}>Welcome, {username}</Text>
+            <Text style={themedStyles.welcomeTitle}>{greetingMessage}</Text>
             
             {/* Pending Records Section */}
             <View style={themedStyles.pendingSection}>
@@ -421,12 +491,6 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={themedStyles.tabLabel}>View</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('Profile')}>
-          <View style={themedStyles.tabIconContainer}>
-            <Ionicons name="person" size={18} color={theme.primary} />
-          </View>
-          <Text style={themedStyles.tabLabel}>Profile</Text>
-        </TouchableOpacity>
 
         <TouchableOpacity style={themedStyles.tabItem} onPress={() => setSettingsModalVisible(true)}>
           <View style={themedStyles.tabIconContainer}>
@@ -542,72 +606,6 @@ export default function HomeScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Profile Modal */}
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={themedStyles.modalOverlay}>
-          <View style={themedStyles.modalContent}>
-            <View style={themedStyles.modalHeader}>
-              <Text style={themedStyles.modalTitle}>Profile Information</Text>
-              <TouchableOpacity
-                style={themedStyles.closeButton}
-                onPress={() => setModalVisible(false)}
-              >
-                <Text style={themedStyles.closeButtonText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            
-            <View style={themedStyles.modalBody}>
-              <View style={themedStyles.profileDetailRow}>
-                <Text style={themedStyles.profileLabel}>Name:</Text>
-                <Text style={themedStyles.profileValue}>{username}</Text>
-              </View>
-              
-              <View style={themedStyles.profileDetailRow}>
-                <Text style={themedStyles.profileLabel}>Location:</Text>
-                <Text style={themedStyles.profileValue}>{locationString}</Text>
-              </View>
-              
-              <View style={themedStyles.profileDetailRow}>
-                <Text style={themedStyles.profileLabel}>Online Status:</Text>
-                <View style={themedStyles.statusRow}>
-                  <View style={[themedStyles.statusDot, { backgroundColor: isOnline ? theme.success : theme.error }]} />
-                  <Text style={[themedStyles.profileValue, { color: isOnline ? theme.success : theme.error }]}>
-                    {isOnline ? 'Connected' : 'Disconnected'}
-                  </Text>
-                </View>
-              </View>
-              
-              {location && (
-                <View style={themedStyles.profileDetailRow}>
-                  <Text style={themedStyles.profileLabel}>Coordinates:</Text>
-                  <Text style={themedStyles.profileValue}>
-                    {location.coords.latitude.toFixed(6)}, {location.coords.longitude.toFixed(6)}
-                  </Text>
-                </View>
-              )}
-              
-              {/* Logout Button */}
-              <TouchableOpacity
-                style={themedStyles.logoutButton}
-                onPress={() => {
-                  setModalVisible(false);
-                  navigation.navigate('Login');
-                }}
-              >
-                <View style={themedStyles.logoutButtonContent}>
-                  <Ionicons name="log-out" size={16} color={theme.whiteText} />
-                  <Text style={themedStyles.logoutButtonText}>Logout</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Settings Modal */}
       <Modal
@@ -775,6 +773,9 @@ const createThemedStyles = (theme, insets) => StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  headerSpacer: {
+    flex: 1,
   },
   profileButton: {
     padding: 5,
