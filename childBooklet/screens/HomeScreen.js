@@ -37,7 +37,6 @@ export default function HomeScreen({ navigation, route }) {
   const [locationString, setLocationString] = useState('Loading...');
   const [pendingRecords, setPendingRecords] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [greetingMessage, setGreetingMessage] = useState('Good Morning, User');
   const username = route.params?.username || 'Health Worker';
   console.log('HomeScreen - Username from route:', username);
@@ -372,7 +371,7 @@ export default function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity 
           style={themedStyles.profileButton} 
-          onPress={() => setProfileModalVisible(true)}
+          onPress={() => navigation.navigate('Profile')}
           accessibilityLabel="Open profile"
           accessibilityRole="button"
         >
