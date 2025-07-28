@@ -172,7 +172,7 @@ export default function ProfileScreen({ navigation }) {
           <Text style={themedStyles.profileName}>{userProfile.name}</Text>
           <View style={themedStyles.verificationBadge}>
             <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
-            <Text style={themedStyles.verificationText}>eSignet Verified</Text>
+            <Text style={themedStyles.verificationText}>Mock MOSIP Verified</Text>
           </View>
         </View>
 
@@ -182,7 +182,7 @@ export default function ProfileScreen({ navigation }) {
           <View style={themedStyles.statusCard}>
             <View style={themedStyles.statusRow}>
               <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
-              <Text style={themedStyles.statusText}>Authenticated via eSignet</Text>
+              <Text style={themedStyles.statusText}>Authenticated via Mock MOSIP</Text>
             </View>
             <Text style={themedStyles.statusSubtext}>
               Authenticated on: {new Date(authData.authenticatedAt).toLocaleDateString()} at {new Date(authData.authenticatedAt).toLocaleTimeString()}

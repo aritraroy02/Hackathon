@@ -12,18 +12,43 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// eSignet API Configuration
-const ESIGNET_CONFIG = {
-  BASE_URL: 'https://esignet.collab.mosip.net', // Production eSignet URL
-  CLIENT_ID: 'your-client-id', // Replace with actual client ID
-  REDIRECT_URI: 'your-app://auth-callback',
-  SCOPE: 'openid profile',
-  ENDPOINTS: {
-    AUTHORIZE: '/v1/esignet/authorization/authenticate',
-    TOKEN: '/v1/esignet/oauth/token',
-    USERINFO: '/v1/esignet/oidc/userinfo',
-    SEND_OTP: '/v1/esignet/authorization/send-otp',
-    VERIFY_OTP: '/v1/esignet/authorization/authenticate'
+// Mock MOSIP ID data - simulating a local database of valid MOSIP IDs
+const MOCK_MOSIP_DATA = {
+  '1234567890': {
+    name: 'ARITRADITYA ROY',
+    email: 'aritraditya.roy@gmailcom',
+    phone: '+91-9876543210',
+    address: '123 Main Street, New Delhi, Delhi 110001',
+    dateOfBirth: '1985-06-15',
+    gender: 'Male',
+    photo: null
+  },
+  '9876543210': {
+    name: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    phone: '+91-8765432109',
+    address: '456 Park Avenue, Mumbai, Maharashtra 400001',
+    dateOfBirth: '1990-03-20',
+    gender: 'Female',
+    photo: null
+  },
+  '5555555555': {
+    name: 'Dr. Alice Johnson',
+    email: 'alice.johnson@healthcare.gov.in',
+    phone: '+91-7654321098',
+    address: '789 Hospital Road, Bangalore, Karnataka 560001',
+    dateOfBirth: '1982-11-10',
+    gender: 'Female',
+    photo: null
+  },
+  '1111111111': {
+    name: 'Health Worker Demo',
+    email: 'demo@health.gov.in',
+    phone: '+91-9999999999',
+    address: 'Demo Address, Demo City, Demo State 123456',
+    dateOfBirth: '1988-01-01',
+    gender: 'Male',
+    photo: null
   }
 };
 
@@ -63,38 +88,6 @@ export default function ESignetAuthScreen({ navigation, route }) {
     return formatted.substring(0, 12); // Limit to 10 digits + 2 spaces
   };
 
-  const makeESignetRequest = async (endpoint, method = 'POST', data = null) => {
-    try {
-      const url = `${ESIGNET_CONFIG.BASE_URL}${endpoint}`;
-      const options = {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      };
-
-      if (data) {
-        options.body = JSON.stringify(data);
-      }
-
-      console.log(`Making eSignet request to: ${url}`);
-      const response = await fetch(url, options);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('eSignet API Error:', response.status, errorText);
-        throw new Error(`eSignet API Error: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('eSignet API Response:', result);
-      return result;
-    } catch (error) {
-      console.error('eSignet Request Error:', error);
-      throw error;
-    }
-  };
 
   const handleUINSubmit = async () => {
     if (!validateUIN(uinNumber)) {
@@ -107,80 +100,36 @@ export default function ESignetAuthScreen({ navigation, route }) {
     try {
       const cleanUIN = uinNumber.replace(/\s/g, '');
       
-      // Step 1: Initialize authentication session
-      const authRequest = {
-        clientId: ESIGNET_CONFIG.CLIENT_ID,
-        scope: ESIGNET_CONFIG.SCOPE,
-        responseType: 'code',
-        redirectUri: ESIGNET_CONFIG.REDIRECT_URI,
-        display: 'page',
-        prompt: 'consent',
-        maxAge: 21600,
-        uiLocales: 'en',
-        claimsLocales: 'en',
-        acrValues: 'mosip:idp:acr:generated-code',
-        claims: JSON.stringify({
-          userinfo: {
-            given_name: { essential: true },
-            family_name: { essential: true },
-            email: { essential: true },
-            phone_number: { essential: true },
-            address: { essential: true },
-            birthdate: { essential: true },
-            gender: { essential: true }
-          }
-        })
-      };
-
-      // Initialize authentication
-      const authResponse = await makeESignetRequest(
-        ESIGNET_CONFIG.ENDPOINTS.AUTHORIZE,
-        'POST',
-        authRequest
-      );
-
-      if (authResponse.transactionId) {
-        setTransactionId(authResponse.transactionId);
-        
-        // Step 2: Send OTP to the UIN
-        const otpRequest = {
-          transactionId: authResponse.transactionId,
-          individualId: cleanUIN,
-          individualIdType: 'UIN',
-          otpChannels: ['phone', 'email']
-        };
-
-        const otpResponse = await makeESignetRequest(
-          ESIGNET_CONFIG.ENDPOINTS.SEND_OTP,
-          'POST',
-          otpRequest
-        );
-
-        if (otpResponse.response === 'SUCCESS') {
-          setStep(2);
-          setTimer(30);
-          setCanResendOtp(false);
-          
-          Alert.alert(
-            'OTP Sent',
-            'OTP has been sent to your registered mobile number and email address. Please enter the 6-digit OTP to continue.',
-            [{ text: 'OK' }]
-          );
-        } else {
-          throw new Error(otpResponse.errors?.[0]?.message || 'Failed to send OTP');
-        }
-      } else {
-        throw new Error('Failed to initialize authentication session');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      // Check if MOSIP ID exists in our mock database
+      const userData = MOCK_MOSIP_DATA[cleanUIN];
+      
+      if (!userData) {
+        throw new Error('MOSIP ID not found. Please use one of the demo IDs: 1234567890, 9876543210, 5555555555, or 1111111111');
       }
+      
+      // Generate mock transaction ID and proceed to OTP step
+      const mockTransactionId = `mock_txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      setTransactionId(mockTransactionId);
+      setStep(2);
+      setTimer(30);
+      setCanResendOtp(false);
+      
+      Alert.alert(
+        'OTP Sent (Mock)',
+        `A mock OTP has been sent to ${userData.phone} and ${userData.email}. For demo purposes, use any 6-digit number as OTP (e.g., 123456).`,
+        [{ text: 'OK' }]
+      );
+      
     } catch (error) {
       console.error('UIN submission error:', error);
       
       let errorMessage = 'Authentication failed. Please try again.';
       
-      if (error.message.includes('Network request failed')) {
-        errorMessage = 'Network connection failed. Please check your internet connection.';
-      } else if (error.message.includes('UIN not found')) {
-        errorMessage = 'UIN not found. Please verify your UIN number.';
+      if (error.message.includes('MOSIP ID not found')) {
+        errorMessage = error.message;
       } else if (error.message.includes('Invalid UIN')) {
         errorMessage = 'Invalid UIN format. Please enter a valid 10-digit UIN.';
       } else if (error.message) {
@@ -210,109 +159,73 @@ export default function ESignetAuthScreen({ navigation, route }) {
     try {
       const cleanUIN = uinNumber.replace(/\s/g, '');
       
-      // Verify OTP and complete authentication
-      const verifyRequest = {
-        transactionId: transactionId,
-        individualId: cleanUIN,
-        individualIdType: 'UIN',
-        challengeList: [
-          {
-            authFactorType: 'OTP',
-            challenge: otp,
-            format: 'alpha-numeric'
-          }
-        ]
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Get user data from mock database
+      const userData = MOCK_MOSIP_DATA[cleanUIN];
+      
+      if (!userData) {
+        throw new Error('User data not found. Session may have expired.');
+      }
+      
+      // For demo purposes, accept any 6-digit OTP
+      // In real implementation, this would verify against sent OTP
+      if (!/^\d{6}$/.test(otp)) {
+        throw new Error('Invalid OTP format. Please enter 6 digits.');
+      }
+      
+      // Create mock authentication data
+      const authData = {
+        isAuthenticated: true,
+        uinNumber: cleanUIN,
+        accessToken: `mock_access_token_${Date.now()}`,
+        refreshToken: `mock_refresh_token_${Date.now()}`,
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        userData: {
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone,
+          address: userData.address,
+          dateOfBirth: userData.dateOfBirth,
+          gender: userData.gender,
+          employeeId: `HW-${cleanUIN.slice(-6)}`
+        },
+        authenticatedAt: new Date().toISOString(),
+        sessionId: `mock_session_${Date.now()}`,
       };
 
-      const verifyResponse = await makeESignetRequest(
-        ESIGNET_CONFIG.ENDPOINTS.VERIFY_OTP,
-        'POST',
-        verifyRequest
-      );
+      await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(authData));
+      await AsyncStorage.setItem('userProfile', JSON.stringify(authData.userData));
 
-      if (verifyResponse.response === 'SUCCESS' && verifyResponse.authToken) {
-        // Exchange auth token for access token
-        const tokenRequest = {
-          grant_type: 'authorization_code',
-          client_id: ESIGNET_CONFIG.CLIENT_ID,
-          code: verifyResponse.authToken,
-          redirect_uri: ESIGNET_CONFIG.REDIRECT_URI
-        };
-
-        const tokenResponse = await makeESignetRequest(
-          ESIGNET_CONFIG.ENDPOINTS.TOKEN,
-          'POST',
-          tokenRequest
-        );
-
-        if (tokenResponse.access_token) {
-          // Get user information
-          const userInfoResponse = await makeESignetRequest(
-            ESIGNET_CONFIG.ENDPOINTS.USERINFO,
-            'GET',
-            null,
-            {
-              'Authorization': `Bearer ${tokenResponse.access_token}`
-            }
-          );
-
-          // Store authentication data
-          const authData = {
-            isAuthenticated: true,
-            uinNumber: cleanUIN,
-            accessToken: tokenResponse.access_token,
-            refreshToken: tokenResponse.refresh_token,
-            tokenType: tokenResponse.token_type,
-            expiresIn: tokenResponse.expires_in,
-            userData: {
-              name: `${userInfoResponse.given_name || ''} ${userInfoResponse.family_name || ''}`.trim(),
-              email: userInfoResponse.email,
-              phone: userInfoResponse.phone_number,
-              address: userInfoResponse.address,
-              dateOfBirth: userInfoResponse.birthdate,
-              gender: userInfoResponse.gender,
-              employeeId: `HW-${cleanUIN.slice(-6)}`
-            },
-            authenticatedAt: new Date().toISOString(),
-            sessionId: `esignet_${Date.now()}`,
-          };
-
-          await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(authData));
-          await AsyncStorage.setItem('userProfile', JSON.stringify(authData.userData));
-
-          Alert.alert(
-            'Authentication Successful',
-            `Welcome, ${authData.userData.name}! You have been successfully authenticated with eSignet. You can now upload pending data.`,
-            [
-              {
-                text: 'Continue',
-                onPress: () => {
-                  if (route.params?.returnTo) {
-                    navigation.navigate(route.params.returnTo);
-                  } else {
-                    navigation.navigate('Home');
-                  }
-                }
+      Alert.alert(
+        'Authentication Successful (Mock)',
+        `Welcome, ${authData.userData.name}! You have been successfully authenticated with mock MOSIP ID. You can now upload pending data.`,
+        [
+          {
+            text: 'Continue',
+            onPress: () => {
+              if (route.params?.returnTo) {
+                navigation.navigate(route.params.returnTo);
+              } else {
+                navigation.navigate('Home');
               }
-            ]
-          );
-        } else {
-          throw new Error('Failed to obtain access token');
-        }
-      } else {
-        throw new Error(verifyResponse.errors?.[0]?.message || 'OTP verification failed');
-      }
+            }
+          }
+        ]
+      );
+      
     } catch (error) {
       console.error('OTP verification error:', error);
       
       let errorMessage = 'OTP verification failed. Please try again.';
       
-      if (error.message.includes('Invalid OTP')) {
-        errorMessage = 'Invalid OTP. Please check and enter the correct OTP.';
-      } else if (error.message.includes('OTP expired')) {
-        errorMessage = 'OTP has expired. Please request a new OTP.';
-      } else if (error.message.includes('Network request failed')) {
-        errorMessage = 'Network connection failed. Please check your internet connection.';
+      if (error.message.includes('Invalid OTP format')) {
+        errorMessage = error.message;
+      } else if (error.message.includes('User data not found')) {
+        errorMessage = 'Session expired. Please start authentication again.';
+        setStep(1);
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -335,29 +248,34 @@ export default function ESignetAuthScreen({ navigation, route }) {
     try {
       const cleanUIN = uinNumber.replace(/\s/g, '');
       
-      const otpRequest = {
-        transactionId: transactionId,
-        individualId: cleanUIN,
-        individualIdType: 'UIN',
-        otpChannels: ['phone', 'email']
-      };
-
-      const otpResponse = await makeESignetRequest(
-        ESIGNET_CONFIG.ENDPOINTS.SEND_OTP,
-        'POST',
-        otpRequest
-      );
-
-      if (otpResponse.response === 'SUCCESS') {
-        setTimer(30);
-        setCanResendOtp(false);
-        Alert.alert('OTP Resent', 'A new OTP has been sent to your registered mobile number and email.');
-      } else {
-        throw new Error(otpResponse.errors?.[0]?.message || 'Failed to resend OTP');
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Get user data to show contact info
+      const userData = MOCK_MOSIP_DATA[cleanUIN];
+      
+      if (!userData) {
+        throw new Error('User data not found. Session may have expired.');
       }
+      
+      // Reset timer for mock OTP resend
+      setTimer(30);
+      setCanResendOtp(false);
+      
+      Alert.alert(
+        'OTP Resent (Mock)', 
+        `A new mock OTP has been sent to ${userData.phone} and ${userData.email}. Use any 6-digit number as OTP.`
+      );
+      
     } catch (error) {
       console.error('Resend OTP error:', error);
-      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      
+      if (error.message.includes('User data not found')) {
+        Alert.alert('Session Error', 'Session expired. Please start authentication again.');
+        setStep(1);
+      } else {
+        Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -372,8 +290,8 @@ export default function ESignetAuthScreen({ navigation, route }) {
             <Text style={styles.logoText}>eSignet</Text>
           </View>
         </View>
-        <Text style={styles.headerTitle}>Digital Identity Authentication</Text>
-        <Text style={styles.headerSubtitle}>Government of India - MOSIP</Text>
+        <Text style={styles.headerTitle}>Mock MOSIP ID Authentication</Text>
+        <Text style={styles.headerSubtitle}>Demo Mode - Government of India - MOSIP</Text>
       </View>
 
       {step === 1 && (
@@ -463,19 +381,19 @@ export default function ESignetAuthScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Security Notice */}
+      {/* Demo Notice */}
       <View style={styles.securityNotice}>
         <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
         <Text style={styles.securityText}>
-          Your data is encrypted and secure. This is a government-verified MOSIP eSignet authentication system.
+          Demo Mode: This is a mock MOSIP authentication system for testing purposes.
         </Text>
       </View>
 
-      {/* Production Notice */}
+      {/* Available Demo IDs Notice */}
       <View style={styles.productionNotice}>
         <Ionicons name="information-circle" size={20} color="#2196F3" />
         <Text style={styles.productionText}>
-          Production Mode: Real eSignet authentication with MOSIP infrastructure
+          Demo IDs: 1234567890, 9876543210, 5555555555, 1111111111 | Any 6-digit OTP works
         </Text>
       </View>
     </ScrollView>
