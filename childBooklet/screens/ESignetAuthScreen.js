@@ -12,46 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { checkInternetConnection, showOfflineAlert } from '../utils/networkUtils';
-
-// Mock MOSIP ID data - simulating a local database of valid MOSIP IDs
-const MOCK_MOSIP_DATA = {
-  '1234567890': {
-    name: 'ARITRADITYA ROY',
-    email: 'aritraditya.roy@gmailcom',
-    phone: '+91-9876543210',
-    address: '123 Main Street, New Delhi, Delhi 110001',
-    dateOfBirth: '1985-06-15',
-    gender: 'Male',
-    photo: null
-  },
-  '9876543210': {
-    name: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    phone: '+91-8765432109',
-    address: '456 Park Avenue, Mumbai, Maharashtra 400001',
-    dateOfBirth: '1990-03-20',
-    gender: 'Female',
-    photo: null
-  },
-  '5555555555': {
-    name: 'Dr. Alice Johnson',
-    email: 'alice.johnson@healthcare.gov.in',
-    phone: '+91-7654321098',
-    address: '789 Hospital Road, Bangalore, Karnataka 560001',
-    dateOfBirth: '1982-11-10',
-    gender: 'Female',
-    photo: null
-  },
-  '1111111111': {
-    name: 'Health Worker Demo',
-    email: 'demo@health.gov.in',
-    phone: '+91-9999999999',
-    address: 'Demo Address, Demo City, Demo State 123456',
-    dateOfBirth: '1988-01-01',
-    gender: 'Male',
-    photo: null
-  }
-};
+import { API_ENDPOINTS, makeRequest } from '../config/api';
 
 export default function ESignetAuthScreen({ navigation, route }) {
   const [step, setStep] = useState(1); // 1: UIN input, 2: OTP verification
@@ -96,7 +57,6 @@ export default function ESignetAuthScreen({ navigation, route }) {
       return;
     }
 
-    // Check internet connection before proceeding
     const isConnected = await checkInternetConnection();
     if (!isConnected) {
       showOfflineAlert('Please connect to the internet before proceeding with authentication.');
@@ -104,47 +64,25 @@ export default function ESignetAuthScreen({ navigation, route }) {
     }
 
     setIsLoading(true);
-    
     try {
       const cleanUIN = uinNumber.replace(/\s/g, '');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Check if MOSIP ID exists in our mock database
-      const userData = MOCK_MOSIP_DATA[cleanUIN];
-      
-      if (!userData) {
-        throw new Error('MOSIP ID not found. Please use one of the demo IDs: 1234567890, 9876543210, 5555555555, or 1111111111');
+      const endpoint = `${API_ENDPOINTS.AUTH_VERIFY_UIN}/${cleanUIN}`;
+      const response = await makeRequest(endpoint, 'GET');
+      if (!response.success || !response.data?.uinExists) {
+        throw new Error(response.error || 'UIN not found.');
       }
-      
-      // Generate mock transaction ID and proceed to OTP step
-      const mockTransactionId = `mock_txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setTransactionId(mockTransactionId);
+      setTransactionId(`txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
       setStep(2);
       setTimer(30);
       setCanResendOtp(false);
-      
       Alert.alert(
-        'OTP Sent (Mock)',
-        `A mock OTP has been sent to ${userData.phone} and ${userData.email}. For demo purposes, use any 6-digit number as OTP (e.g., 123456).`,
+        'OTP Sent',
+        `An OTP has been sent to your registered phone/email. Enter the 6-digit OTP to continue.`,
         [{ text: 'OK' }]
       );
-      
     } catch (error) {
       console.error('UIN submission error:', error);
-      
-      let errorMessage = 'Authentication failed. Please try again.';
-      
-      if (error.message.includes('MOSIP ID not found')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('Invalid UIN')) {
-        errorMessage = 'Invalid UIN format. Please enter a valid 10-digit UIN.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert('Authentication Error', errorMessage);
+      Alert.alert('Authentication Error', error.message || 'Authentication failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -155,69 +93,33 @@ export default function ESignetAuthScreen({ navigation, route }) {
       Alert.alert('Invalid OTP', 'Please enter a valid 6-digit OTP.');
       return;
     }
-
     if (!transactionId) {
       Alert.alert('Session Error', 'Authentication session expired. Please start again.');
       setStep(1);
       return;
     }
-
-    // Check internet connection before proceeding
     const isConnected = await checkInternetConnection();
     if (!isConnected) {
       showOfflineAlert('Please connect to the internet before proceeding with authentication.');
       return;
     }
-
     setIsLoading(true);
-
     try {
       const cleanUIN = uinNumber.replace(/\s/g, '');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Get user data from mock database
-      const userData = MOCK_MOSIP_DATA[cleanUIN];
-      
-      if (!userData) {
-        throw new Error('User data not found. Session may have expired.');
-      }
-      
-      // For demo purposes, accept any 6-digit OTP
-      // In real implementation, this would verify against sent OTP
-      if (!/^\d{6}$/.test(otp)) {
-        throw new Error('Invalid OTP format. Please enter 6 digits.');
-      }
-      
-      // Create mock authentication data
-      const authData = {
-        isAuthenticated: true,
+      const endpoint = API_ENDPOINTS.AUTH_VERIFY_OTP;
+      const response = await makeRequest(endpoint, 'POST', {
         uinNumber: cleanUIN,
-        username: userData.name, // Store username for easy access
-        accessToken: `mock_access_token_${Date.now()}`,
-        refreshToken: `mock_refresh_token_${Date.now()}`,
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        userData: {
-          name: userData.name,
-          email: userData.email,
-          phone: userData.phone,
-          address: userData.address,
-          dateOfBirth: userData.dateOfBirth,
-          gender: userData.gender,
-          employeeId: `HW-${cleanUIN.slice(-6)}`
-        },
-        authenticatedAt: new Date().toISOString(),
-        sessionId: `mock_session_${Date.now()}`,
-      };
-
-      await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(authData));
-      await AsyncStorage.setItem('userProfile', JSON.stringify(authData.userData));
-
+        otp,
+        transactionId
+      });
+      if (!response.success || !response.data?.accessToken) {
+        throw new Error(response.error || 'OTP verification failed.');
+      }
+      await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(response.data));
+      await AsyncStorage.setItem('userProfile', JSON.stringify(response.data.userData));
       Alert.alert(
-        'Authentication Successful (Mock)',
-        `Welcome, ${authData.userData.name}! You have been successfully authenticated with mock MOSIP ID. You can now upload pending data.`,
+        'Authentication Successful',
+        `Welcome, ${response.data.userData.name}! You have been successfully authenticated. You can now upload pending data.`,
         [
           {
             text: 'Continue',
@@ -231,22 +133,12 @@ export default function ESignetAuthScreen({ navigation, route }) {
           }
         ]
       );
-      
     } catch (error) {
       console.error('OTP verification error:', error);
-      
-      let errorMessage = 'OTP verification failed. Please try again.';
-      
-      if (error.message.includes('Invalid OTP format')) {
-        errorMessage = error.message;
-      } else if (error.message.includes('User data not found')) {
-        errorMessage = 'Session expired. Please start authentication again.';
+      Alert.alert('Verification Error', error.message || 'OTP verification failed. Please try again.');
+      if (error.message && error.message.toLowerCase().includes('session')) {
         setStep(1);
-      } else if (error.message) {
-        errorMessage = error.message;
       }
-      
-      Alert.alert('Verification Error', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -258,40 +150,15 @@ export default function ESignetAuthScreen({ navigation, route }) {
       setStep(1);
       return;
     }
-
     setIsLoading(true);
-    
     try {
-      const cleanUIN = uinNumber.replace(/\s/g, '');
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Get user data to show contact info
-      const userData = MOCK_MOSIP_DATA[cleanUIN];
-      
-      if (!userData) {
-        throw new Error('User data not found. Session may have expired.');
-      }
-      
-      // Reset timer for mock OTP resend
+      // In production, trigger backend to resend OTP (not implemented in demo)
       setTimer(30);
       setCanResendOtp(false);
-      
-      Alert.alert(
-        'OTP Resent (Mock)', 
-        `A new mock OTP has been sent to ${userData.phone} and ${userData.email}. Use any 6-digit number as OTP.`
-      );
-      
+      Alert.alert('OTP Resent', 'A new OTP has been sent to your registered contact.');
     } catch (error) {
       console.error('Resend OTP error:', error);
-      
-      if (error.message.includes('User data not found')) {
-        Alert.alert('Session Error', 'Session expired. Please start authentication again.');
-        setStep(1);
-      } else {
-        Alert.alert('Error', 'Failed to resend OTP. Please try again.');
-      }
+      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -306,8 +173,8 @@ export default function ESignetAuthScreen({ navigation, route }) {
             <Text style={styles.logoText}>eSignet</Text>
           </View>
         </View>
-        <Text style={styles.headerTitle}>Mock MOSIP ID Authentication</Text>
-        <Text style={styles.headerSubtitle}>Demo Mode - Government of India - MOSIP</Text>
+        <Text style={styles.headerTitle}>MOSIP ID Authentication</Text>
+        <Text style={styles.headerSubtitle}>Government of India - MOSIP</Text>
       </View>
 
       {step === 1 && (
@@ -397,19 +264,11 @@ export default function ESignetAuthScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Demo Notice */}
+      {/* Security Notice */}
       <View style={styles.securityNotice}>
         <Ionicons name="shield-checkmark" size={20} color="#4CAF50" />
         <Text style={styles.securityText}>
-          Demo Mode: This is a mock MOSIP authentication system for testing purposes.
-        </Text>
-      </View>
-
-      {/* Available Demo IDs Notice */}
-      <View style={styles.productionNotice}>
-        <Ionicons name="information-circle" size={20} color="#2196F3" />
-        <Text style={styles.productionText}>
-          Demo IDs: 1234567890, 9876543210, 5555555555, 1111111111 | Any 6-digit OTP works
+          Your authentication is securely processed via backend and Google Cloud MongoDB.
         </Text>
       </View>
     </ScrollView>

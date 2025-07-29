@@ -4,45 +4,57 @@ const User = require('./models/User');
 // Load environment variables
 require('dotenv').config();
 
-// Mock MOSIP data from the frontend (matching ESignetAuthScreen.js)
-const MOCK_MOSIP_DATA = {
-  '1234567890': {
+// Direct user array for MongoDB seed
+const users = [
+  {
+    uinNumber: '1234567890',
     name: 'ARITRADITYA ROY',
     email: 'aritraditya.roy@gmailcom',
     phone: '+91-9876543210',
     address: '123 Main Street, New Delhi, Delhi 110001',
     dateOfBirth: '1985-06-15',
     gender: 'Male',
-    photo: null
+    photo: null,
+    employeeId: 'HW-678900',
+    isActive: true
   },
-  '9876543210': {
+  {
+    uinNumber: '9876543210',
     name: 'Jane Smith',
     email: 'jane.smith@example.com',
     phone: '+91-8765432109',
     address: '456 Park Avenue, Mumbai, Maharashtra 400001',
     dateOfBirth: '1990-03-20',
     gender: 'Female',
-    photo: null
+    photo: null,
+    employeeId: 'HW-432110',
+    isActive: true
   },
-  '5555555555': {
+  {
+    uinNumber: '5555555555',
     name: 'Dr. Alice Johnson',
     email: 'alice.johnson@healthcare.gov.in',
     phone: '+91-7654321098',
     address: '789 Hospital Road, Bangalore, Karnataka 560001',
     dateOfBirth: '1982-11-10',
     gender: 'Female',
-    photo: null
+    photo: null,
+    employeeId: 'HW-555555',
+    isActive: true
   },
-  '1111111111': {
+  {
+    uinNumber: '1111111111',
     name: 'Health Worker Demo',
     email: 'demo@health.gov.in',
     phone: '+91-9999999999',
     address: 'Demo Address, Demo City, Demo State 123456',
     dateOfBirth: '1988-01-01',
     gender: 'Male',
-    photo: null
+    photo: null,
+    employeeId: 'HW-111111',
+    isActive: true
   }
-};
+];
 
 const seedUsers = async () => {
   try {
@@ -61,21 +73,8 @@ const seedUsers = async () => {
     await User.deleteMany({});
     console.log('🗑️  Cleared existing users');
 
-    // Convert MOCK_MOSIP_DATA to user documents
-    const users = Object.entries(MOCK_MOSIP_DATA).map(([uinNumber, userData]) => ({
-      uinNumber,
-      name: userData.name,
-      email: userData.email,
-      phone: userData.phone,
-      address: userData.address,
-      dateOfBirth: userData.dateOfBirth,
-      gender: userData.gender,
-      photo: userData.photo,
-      employeeId: `HW-${uinNumber.slice(-6)}`,
-      isActive: true
-    }));
-
     // Insert users into database
+
     const insertedUsers = await User.insertMany(users);
     
     console.log('✅ Demo users seeded successfully!');
