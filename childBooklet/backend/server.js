@@ -2,6 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const Child = require('./models/Child');
+const User = require('./models/User');
+const authRoutes = require('./routes/auth');
+const { verifyToken } = require('./middleware/auth');
 
 // Load environment variables (only if not in production/cloud environment)
 if (!process.env.MONGODB_URI || process.env.NODE_ENV !== 'production') {
@@ -88,6 +91,9 @@ connectDB();
 
 // Routes
 
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
 // Root health check
 app.get('/', (req, res) => {
   res.json({
@@ -96,16 +102,25 @@ app.get('/', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       health: '/api/health',
+      auth: '/api/auth',
       children: '/api/children',
       bulkUpload: '/api/children/bulk'
     }
   });
 });
 
-// Create new child record
-app.post('/api/children', async (req, res) => {
+// Create new child record - PROTECTED ENDPOINT
+app.post('/api/children', verifyToken, async (req, res) => {
   try {
-    const child = new Child(req.body);
+    const childData = {
+      ...req.body,
+      uploadedBy: req.user.name,
+      uploaderUIN: req.user.uinNumber,
+      uploaderEmployeeId: req.user.employeeId,
+      uploadedAt: new Date().toISOString()
+    };
+    
+    const child = new Child(childData);
     await child.save();
     res.status(201).json({ success: true, data: child });
   } catch (error) {
@@ -113,8 +128,8 @@ app.post('/api/children', async (req, res) => {
   }
 });
 
-// Get all children records
-app.get('/api/children', async (req, res) => {
+// Get all children records - PROTECTED ENDPOINT
+app.get('/api/children', verifyToken, async (req, res) => {
   try {
     const children = await Child.find();
     res.json({ success: true, data: children });
@@ -123,8 +138,8 @@ app.get('/api/children', async (req, res) => {
   }
 });
 
-// Get child by healthId
-app.get('/api/children/:healthId', async (req, res) => {
+// Get child by healthId - PROTECTED ENDPOINT
+app.get('/api/children/:healthId', verifyToken, async (req, res) => {
   try {
     const child = await Child.findOne({ healthId: req.params.healthId });
     if (!child) {
@@ -136,12 +151,18 @@ app.get('/api/children/:healthId', async (req, res) => {
   }
 });
 
-// Update child record
-app.put('/api/children/:healthId', async (req, res) => {
+// Update child record - PROTECTED ENDPOINT
+app.put('/api/children/:healthId', verifyToken, async (req, res) => {
   try {
+    const updateData = {
+      ...req.body,
+      lastUpdatedBy: req.user.name,
+      lastUpdatedAt: new Date().toISOString()
+    };
+    
     const child = await Child.findOneAndUpdate(
       { healthId: req.params.healthId },
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     );
     if (!child) {
@@ -153,8 +174,8 @@ app.put('/api/children/:healthId', async (req, res) => {
   }
 });
 
-// Delete child record
-app.delete('/api/children/:healthId', async (req, res) => {
+// Delete child record - PROTECTED ENDPOINT
+app.delete('/api/children/:healthId', verifyToken, async (req, res) => {
   try {
     const child = await Child.findOneAndDelete({ healthId: req.params.healthId });
     if (!child) {
@@ -166,8 +187,8 @@ app.delete('/api/children/:healthId', async (req, res) => {
   }
 });
 
-// Bulk upload for offline records with retry mechanism
-app.post('/api/children/bulk', async (req, res) => {
+// Bulk upload for offline records with retry mechanism - PROTECTED ENDPOINT
+app.post('/api/children/bulk', verifyToken, async (req, res) => {
   try {
     const children = req.body;
     const results = {
@@ -176,9 +197,23 @@ app.post('/api/children/bulk', async (req, res) => {
       duplicates: []
     };
 
+    // Add user info to each child record for tracking
+    const userInfo = {
+      uploadedBy: req.user.name,
+      uploaderUIN: req.user.uinNumber,
+      uploaderEmployeeId: req.user.employeeId,
+      uploadedAt: new Date().toISOString()
+    };
+
     // Process each child record individually to handle partial success
     for (const child of children) {
       try {
+        // Add user tracking info to child record
+        const childWithUserInfo = {
+          ...child,
+          ...userInfo
+        };
+
         // Check if record already exists
         const existingChild = await Child.findOne({ healthId: child.healthId });
         
@@ -186,7 +221,7 @@ app.post('/api/children/bulk', async (req, res) => {
           // If record exists, update it with new data
           const updatedChild = await Child.findOneAndUpdate(
             { healthId: child.healthId },
-            child,
+            childWithUserInfo,
             { new: true, runValidators: true }
           );
           results.duplicates.push({
@@ -196,7 +231,7 @@ app.post('/api/children/bulk', async (req, res) => {
           });
         } else {
           // If record is new, create it
-          const newChild = new Child(child);
+          const newChild = new Child(childWithUserInfo);
           await newChild.save();
           results.success.push({
             healthId: child.healthId,
@@ -219,7 +254,9 @@ app.post('/api/children/bulk', async (req, res) => {
         total: children.length,
         successful: results.success.length,
         updated: results.duplicates.length,
-        failed: results.failed.length
+        failed: results.failed.length,
+        uploadedBy: req.user.name,
+        uploaderUIN: req.user.uinNumber
       },
       details: results
     });

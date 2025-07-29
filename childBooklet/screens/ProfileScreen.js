@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { checkInternetConnection } from '../utils/networkUtils';
 
 export default function ProfileScreen({ navigation }) {
   const { theme } = useTheme();
@@ -19,17 +20,44 @@ export default function ProfileScreen({ navigation }) {
   const [userProfile, setUserProfile] = useState(null);
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
   const themedStyles = createThemedStyles(theme, insets);
 
   useEffect(() => {
     loadUserProfile();
+    checkNetworkStatus();
+    
     // Set up focus listener to reload profile when screen comes into focus
     const unsubscribe = navigation.addListener('focus', () => {
       loadUserProfile();
+      checkNetworkStatus();
     });
     return unsubscribe;
   }, [navigation]);
+
+  const checkNetworkStatus = async () => {
+    try {
+      const isConnected = await checkInternetConnection();
+      setIsOffline(!isConnected);
+      
+      if (!isConnected) {
+        // Show red popup for offline status
+        Alert.alert(
+          'No Internet Connection',
+          'Please connect to the internet before proceeding further.',
+          [{ text: 'OK', style: 'cancel' }],
+          { 
+            titleStyle: { color: '#FF0000' }, // Red title
+            messageStyle: { color: '#FF0000' } // Red message
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error checking network status:', error);
+      setIsOffline(true);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -45,7 +73,18 @@ export default function ProfileScreen({ navigation }) {
           [
             {
               text: 'Authenticate',
-              onPress: () => navigation.navigate('ESignetAuth'),
+              onPress: async () => {
+                const isConnected = await checkInternetConnection();
+                if (!isConnected) {
+                  Alert.alert(
+                    'No Internet Connection',
+                    'Please connect to the internet before proceeding further.',
+                    [{ text: 'OK', style: 'cancel' }]
+                  );
+                  return;
+                }
+                navigation.navigate('ESignetAuth');
+              },
             },
             {
               text: 'Cancel',
@@ -113,7 +152,18 @@ export default function ProfileScreen({ navigation }) {
     );
   };
 
-  const handleEditProfile = () => {
+  const handleEditProfile = async () => {
+    // Check internet connection before allowing profile edits
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please connect to the internet before proceeding further.',
+        [{ text: 'OK', style: 'cancel' }]
+      );
+      return;
+    }
+
     Alert.alert(
       'Edit Profile',
       'Profile editing is not available in this demo version. In a real implementation, this would allow users to update their profile information.',
@@ -136,7 +186,18 @@ export default function ProfileScreen({ navigation }) {
         <Text style={themedStyles.errorText}>Profile not available</Text>
         <TouchableOpacity
           style={themedStyles.authButton}
-          onPress={() => navigation.navigate('ESignetAuth')}
+          onPress={async () => {
+            const isConnected = await checkInternetConnection();
+            if (!isConnected) {
+              Alert.alert(
+                'No Internet Connection',
+                'Please connect to the internet before proceeding further.',
+                [{ text: 'OK', style: 'cancel' }]
+              );
+              return;
+            }
+            navigation.navigate('ESignetAuth');
+          }}
         >
           <Text style={themedStyles.authButtonText}>Authenticate with eSignet</Text>
         </TouchableOpacity>
@@ -162,6 +223,16 @@ export default function ProfileScreen({ navigation }) {
           <Ionicons name="create-outline" size={24} color={theme.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Offline Indicator */}
+      {isOffline && (
+        <View style={themedStyles.offlineIndicator}>
+          <Ionicons name="wifi-outline" size={16} color="#FFFFFF" />
+          <Text style={themedStyles.offlineText}>
+            Please connect to the internet before proceeding further
+          </Text>
+        </View>
+      )}
 
       <ScrollView style={themedStyles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Picture and Basic Info */}
@@ -448,6 +519,25 @@ const createThemedStyles = (theme, insets) => StyleSheet.create({
     color: '#FF3B30',
     fontWeight: '600',
     marginLeft: 8,
+  },
+  offlineIndicator: {
+    backgroundColor: '#FF3B30',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  offlineText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+    textAlign: 'center',
+    flex: 1,
   },
   footer: {
     alignItems: 'center',

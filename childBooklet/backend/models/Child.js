@@ -39,7 +39,15 @@ const childSchema = new mongoose.Schema({
     accuracy: { type: Number },
     timestamp: { type: Date },
     error: { type: String }
-  }
+  },
+
+  // User tracking fields for audit trail
+  uploadedBy: { type: String },
+  uploaderUIN: { type: String },
+  uploaderEmployeeId: { type: String },
+  uploadedAt: { type: String },
+  lastUpdatedBy: { type: String },
+  lastUpdatedAt: { type: String }
 });
 
 module.exports = mongoose.model('Child', childSchema);

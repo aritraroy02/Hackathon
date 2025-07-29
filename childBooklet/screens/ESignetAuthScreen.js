@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkInternetConnection, showOfflineAlert } from '../utils/networkUtils';
 
 // Mock MOSIP ID data - simulating a local database of valid MOSIP IDs
 const MOCK_MOSIP_DATA = {
@@ -95,6 +96,13 @@ export default function ESignetAuthScreen({ navigation, route }) {
       return;
     }
 
+    // Check internet connection before proceeding
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) {
+      showOfflineAlert('Please connect to the internet before proceeding with authentication.');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -151,6 +159,13 @@ export default function ESignetAuthScreen({ navigation, route }) {
     if (!transactionId) {
       Alert.alert('Session Error', 'Authentication session expired. Please start again.');
       setStep(1);
+      return;
+    }
+
+    // Check internet connection before proceeding
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) {
+      showOfflineAlert('Please connect to the internet before proceeding with authentication.');
       return;
     }
 

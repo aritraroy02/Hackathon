@@ -22,6 +22,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { makeRequest, API_ENDPOINTS } from '../config/api';
+import { checkInternetConnection } from '../utils/networkUtils';
 
 export default function HomeScreen({ navigation, route }) {
   const { theme, toggleTheme, isDarkMode } = useTheme();
@@ -183,6 +184,21 @@ export default function HomeScreen({ navigation, route }) {
   const handleLogout = () => {
     toggleMenu();
     setTimeout(() => navigation.navigate('Home'), 250);
+  };
+
+  const handleProfileNavigation = async () => {
+    // Check internet connection before navigating to profile
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please connect to the internet before proceeding further.',
+        [{ text: 'OK', style: 'cancel' }]
+      );
+      return;
+    }
+    
+    navigation.navigate('Profile');
   };
 
   const checkESignetAuth = async () => {
@@ -372,7 +388,7 @@ export default function HomeScreen({ navigation, route }) {
         <View style={themedStyles.headerSpacer} />
         <TouchableOpacity 
           style={themedStyles.profileButton} 
-          onPress={() => navigation.navigate('Profile')}
+          onPress={handleProfileNavigation}
           accessibilityLabel="Open profile"
           accessibilityRole="button"
         >
