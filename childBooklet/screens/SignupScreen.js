@@ -906,7 +906,7 @@ const handleSubmit = async () => {
             
             <TouchableOpacity
               style={[styles.continueButton, { backgroundColor: '#666', marginTop: 8 }]}
-              onPress={() => navigation.navigate('Login')}
+              onPress={() => navigation.navigate('Home')}
             >
               <Text style={styles.continueButtonText}>Back to Home</Text>
             </TouchableOpacity>

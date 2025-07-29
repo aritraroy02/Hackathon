@@ -182,7 +182,7 @@ export default function HomeScreen({ navigation, route }) {
 
   const handleLogout = () => {
     toggleMenu();
-    setTimeout(() => navigation.navigate('Login'), 250);
+    setTimeout(() => navigation.navigate('Home'), 250);
   };
 
   const checkESignetAuth = async () => {
