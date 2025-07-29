@@ -376,8 +376,15 @@ export default function HomeScreen({ navigation, route }) {
           accessibilityLabel="Open profile"
           accessibilityRole="button"
         >
-          <View style={themedStyles.profileCircle}>
-            <Ionicons name="person" size={20} color={theme.whiteText} />
+          <View style={themedStyles.profileContainer}>
+            <View style={themedStyles.profileCircle}>
+              <Ionicons name="person" size={20} color={theme.whiteText} />
+            </View>
+            {/* Connectivity Status Dot - Positioned as overlay */}
+            <View style={[
+              themedStyles.connectivityDot,
+              { backgroundColor: isOnline ? '#22C55E' : '#6B7280' }
+            ]} />
           </View>
         </TouchableOpacity>
       </View>
@@ -786,6 +793,19 @@ const createThemedStyles = (theme, insets) => StyleSheet.create({
     backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileContainer: {
+    position: 'relative',
+  },
+  connectivityDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    borderWidth: 2,
+    borderColor: theme.headerBackground,
   },
   // Main Content Styles
   mainContent: {
