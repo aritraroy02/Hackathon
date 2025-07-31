@@ -20,8 +20,15 @@ import RNPickerSelect from 'react-native-picker-select';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
+import { useTheme } from '../contexts/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { checkInternetConnection } from '../utils/networkUtils';
 
 export default function SignupScreen({ navigation, route }) {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  
   // Network connectivity state
   const [isConnected, setIsConnected] = useState(true);
   const [pendingRecords, setPendingRecords] = useState([]);
@@ -491,23 +498,66 @@ const handleSubmit = async () => {
     setIsSaving(false);
   };
 
+  const handleProfileNavigation = async () => {
+    // Check internet connection before navigating to profile
+    const isConnected = await checkInternetConnection();
+    if (!isConnected) {
+      Alert.alert(
+        'No Internet Connection',
+        'Please connect to the internet before proceeding further.',
+        [{ text: 'OK', style: 'cancel' }]
+      );
+      return;
+    }
+    
+    navigation.navigate('Profile');
+  };
+
   const reviewEntries = Object.entries(formData).filter(([k]) => !['childImage'].includes(k));
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {step === 1 && (
-        <>
-          <Text style={styles.heading}>Step 1: Child Info</Text>
+  const themedStyles = createThemedStyles(theme, insets);
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Child's Full Name</Text>
+  return (
+    <View style={themedStyles.mainContainer}>
+      {/* Header with Profile Button */}
+      <View style={themedStyles.headerContainer}>
+        <View style={themedStyles.headerSpacer} />
+        <TouchableOpacity 
+          style={themedStyles.profileButton} 
+          onPress={handleProfileNavigation}
+          accessibilityLabel="Open profile"
+          accessibilityRole="button"
+        >
+          <View style={themedStyles.profileContainer}>
+            <View style={themedStyles.profileCircle}>
+              <Ionicons name="person" size={20} color={theme.whiteText} />
+            </View>
+            {/* Connectivity Status Dot - Positioned as overlay */}
+            <View style={[
+              themedStyles.connectivityDot,
+              { backgroundColor: isConnected ? '#22C55E' : '#6B7280' }
+            ]} />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Main Content */}
+      <View style={themedStyles.mainContent}>
+        <ScrollView contentContainerStyle={themedStyles.container}>
+        {step === 1 && (
+        <>
+          <Text style={themedStyles.heading}>Step 1: Child Info</Text>
+
+          <View style={themedStyles.inputContainer}>
+            <Text style={themedStyles.label}>Child's Full Name</Text>
             <TextInput
               placeholder="Enter child's full name"
-              style={[styles.input, errors.childName && styles.inputError]}
+              style={[themedStyles.input, errors.childName && themedStyles.inputError]}
               value={formData.childName}
               onChangeText={(text) => handleChange('childName', text)}
+              placeholderTextColor={theme.secondaryText}
             />
-            {errors.childName && <Text style={styles.errorText}>{errors.childName}</Text>}
+            {errors.childName && <Text style={themedStyles.errorText}>{errors.childName}</Text>}
           </View>
 
           <RNPickerSelect
@@ -519,21 +569,21 @@ const handleSubmit = async () => {
             ]}
             placeholder={{ label: 'Select Gender', value: '' }}
             style={{
-              inputIOS: styles.input,
-              inputAndroid: styles.input,
+              inputIOS: themedStyles.input,
+              inputAndroid: themedStyles.input,
             }}
             useNativeAndroidPickerStyle={false}
           />
 
-          <View style={styles.imageUploadBox}>
+          <View style={themedStyles.imageUploadBox}>
             {formData.facePhoto && (
-              <Image source={{ uri: formData.facePhoto }} style={styles.childImagePreview} />
+              <Image source={{ uri: formData.facePhoto }} style={themedStyles.childImagePreview} />
             )}
             <TouchableOpacity
-              style={styles.uploadButton}
+              style={themedStyles.uploadButton}
               onPress={handleImagePicker}
             >
-              <Text style={styles.uploadButtonText}>
+              <Text style={themedStyles.uploadButtonText}>
                 {formData.facePhoto ? 'Change Photo' : 'Upload Child Photo'}
               </Text>
             </TouchableOpacity>
@@ -541,10 +591,11 @@ const handleSubmit = async () => {
 
           <TextInput
             placeholder="Age (in years)"
-            style={styles.input}
+            style={themedStyles.input}
             keyboardType="numeric"
             value={formData.age}
             onChangeText={(text) => handleChange('age', text)}
+            placeholderTextColor={theme.secondaryText}
           />
           
           <RNPickerSelect
@@ -556,8 +607,8 @@ const handleSubmit = async () => {
             ]}
             placeholder={{ label: 'Select ID Type (optional)', value: '' }}
             style={{
-              inputIOS: styles.input,
-              inputAndroid: styles.input,
+              inputIOS: themedStyles.input,
+              inputAndroid: themedStyles.input,
             }}
             useNativeAndroidPickerStyle={false}
           />
@@ -565,16 +616,17 @@ const handleSubmit = async () => {
           {formData.idType === 'local' && (
             <TextInput
               placeholder="Enter Local ID"
-              style={styles.input}
+              style={themedStyles.input}
               value={formData.localId}
               onChangeText={(text) => handleChange('localId', text)}
+              placeholderTextColor={theme.secondaryText}
             />
           )}
           
           {formData.idType === 'aadhar' && (
             <TextInput
               placeholder="Aadhar Card No. (XXXX XXXX XXXX)"
-              style={styles.input}
+              style={themedStyles.input}
               keyboardType="numeric"
               maxLength={14}
               value={formData.localId}
@@ -585,17 +637,19 @@ const handleSubmit = async () => {
                   handleChange('localId', formatted);
                 }
               }}
+              placeholderTextColor={theme.secondaryText}
             />
           )}
 
 
-          <View style={styles.weightRow}>
+          <View style={themedStyles.weightRow}>
             <TextInput
               placeholder="Weight"
-              style={[styles.input, styles.weightInput]}
+              style={[themedStyles.input, themedStyles.weightInput]}
               keyboardType="numeric"
               value={formData.weight}
               onChangeText={(text) => handleChange('weight', text)}
+              placeholderTextColor={theme.secondaryText}
             />
             <RNPickerSelect
               onValueChange={handleUnitChange}
@@ -605,28 +659,29 @@ const handleSubmit = async () => {
                 { label: 'lb', value: 'lb' },
               ]}
               style={{
-                inputIOS: styles.unitPicker,
-                inputAndroid: styles.unitPicker,
+                inputIOS: themedStyles.unitPicker,
+                inputAndroid: themedStyles.unitPicker,
               }}
               useNativeAndroidPickerStyle={false}
               placeholder={{}}
             />
           </View>
 
-          <View style={styles.weightRow}>
+          <View style={themedStyles.weightRow}>
             {heightUnit === 'cm' ? (
               <TextInput
                 placeholder="Height (cm)"
-                style={[styles.input, styles.weightInput]}
+                style={[themedStyles.input, themedStyles.weightInput]}
                 keyboardType="numeric"
                 value={formData.height}
                 onChangeText={(text) => handleChange('height', text)}
+                placeholderTextColor={theme.secondaryText}
               />
             ) : (
               <>
                 <TextInput
                   placeholder="ft"
-                  style={[styles.input, { flex: 1, marginRight: 5 }]}
+                  style={[themedStyles.input, { flex: 1, marginRight: 5 }]}
                   keyboardType="numeric"
                   value={feet}
                   onChangeText={(text) => {
@@ -634,10 +689,11 @@ const handleSubmit = async () => {
                     const totalInches = parseInt(text || 0) * 12 + parseInt(inches || 0);
                     handleChange('height', (totalInches * 2.54).toFixed(2));
                   }}
+                  placeholderTextColor={theme.secondaryText}
                 />
                 <TextInput
                   placeholder="in"
-                  style={[styles.input, { flex: 1, marginLeft: 5 }]}
+                  style={[themedStyles.input, { flex: 1, marginLeft: 5 }]}
                   keyboardType="numeric"
                   value={inches}
                   onChangeText={(text) => {
@@ -645,6 +701,7 @@ const handleSubmit = async () => {
                     const totalInches = parseInt(feet || 0) * 12 + parseInt(text || 0);
                     handleChange('height', (totalInches * 2.54).toFixed(2));
                   }}
+                  placeholderTextColor={theme.secondaryText}
                 />
               </>
             )}
@@ -656,16 +713,16 @@ const handleSubmit = async () => {
                 { label: 'ft/in', value: 'ft/in' },
               ]}
               style={{
-                inputIOS: styles.unitPicker,
-                inputAndroid: styles.unitPicker,
+                inputIOS: themedStyles.unitPicker,
+                inputAndroid: themedStyles.unitPicker,
               }}
               useNativeAndroidPickerStyle={false}
               placeholder={{}}
             />
           </View>
 
-          <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-            <Text style={styles.nextButtonText}>Next →</Text>
+          <TouchableOpacity style={themedStyles.nextButton} onPress={handleNext}>
+            <Text style={themedStyles.nextButtonText}>Next →</Text>
           </TouchableOpacity>
         </>
       )}
@@ -673,8 +730,13 @@ const handleSubmit = async () => {
 
       {step === 2 && (
         <>
-          <Text style={styles.heading}>Step 2: Parent Info</Text>
-          <TextInput placeholder="Parent/Guardian Name" style={styles.input} onChangeText={(text) => handleChange('guardianName', text)} />
+          <Text style={themedStyles.heading}>Step 2: Parent Info</Text>
+          <TextInput 
+            placeholder="Parent/Guardian Name" 
+            style={themedStyles.input} 
+            onChangeText={(text) => handleChange('guardianName', text)} 
+            placeholderTextColor={theme.secondaryText}
+          />
 
           {/* Relation Dropdown */}
           <RNPickerSelect
@@ -690,8 +752,8 @@ const handleSubmit = async () => {
               { label: 'Other', value: 'Other' },
             ]}
             style={{
-              inputIOS: styles.input,
-              inputAndroid: styles.input,
+              inputIOS: themedStyles.input,
+              inputAndroid: themedStyles.input,
             }}
             useNativeAndroidPickerStyle={false}
             placeholder={{ label: 'Select Relation', value: null }}
@@ -701,14 +763,15 @@ const handleSubmit = async () => {
           {formData.relation === 'Other' && (
             <TextInput
               placeholder="Please specify relation"
-              style={styles.input}
+              style={themedStyles.input}
               value={customRelation}
               onChangeText={setCustomRelation}
+              placeholderTextColor={theme.secondaryText}
             />
           )}
 
           {/* Phone Number with Country Code */}
-          <View style={styles.phoneRow}>
+          <View style={themedStyles.phoneRow}>
             <RNPickerSelect
               onValueChange={(value) => handleChange('countryCode', value)}
               value={formData.countryCode}
@@ -716,8 +779,8 @@ const handleSubmit = async () => {
                 { label: '+91 (India)', value: '+91' },
               ]}
               style={{
-                inputIOS: styles.countryPicker,
-                inputAndroid: styles.countryPicker,
+                inputIOS: themedStyles.countryPicker,
+                inputAndroid: themedStyles.countryPicker,
               }}
               useNativeAndroidPickerStyle={false}
               placeholder={{}}
@@ -725,7 +788,7 @@ const handleSubmit = async () => {
 
             <TextInput
               placeholder="Phone Number"
-              style={[styles.input, { flex: 1 }]}
+              style={[themedStyles.input, { flex: 1 }]}
               keyboardType="numeric"
               maxLength={10}
               value={formData.phone}
@@ -737,94 +800,101 @@ const handleSubmit = async () => {
                   setPhoneError('Phone number must be 10 digits');
                 }
               }}
+              placeholderTextColor={theme.secondaryText}
             />
           </View>
 
           {phoneError ? (
-            <Text style={styles.errorText}>{phoneError}</Text>
+            <Text style={themedStyles.errorText}>{phoneError}</Text>
           ) : null}
 
 
           
           {/* Malnutrition Signs */}
-          <View style={styles.inputContainer}>
-            <View style={styles.skipContainerRight}>
-              <Text style={styles.skipText}>Skip Malnutrition Signs</Text>
+          <View style={themedStyles.inputContainer}>
+            <View style={themedStyles.skipContainerRight}>
+              <Text style={themedStyles.skipText}>Skip Malnutrition Signs</Text>
               <Switch
                 value={formData.skipMalnutrition}
                 onValueChange={(value) => {
                   handleChange('skipMalnutrition', value);
                   if (value) handleChange('malnutritionSigns', 'N/A');
                 }}
+                trackColor={{ false: '#CCCCCC', true: theme.primary }}
+                thumbColor={formData.skipMalnutrition ? theme.whiteText : '#999999'}
               />
             </View>
             {!formData.skipMalnutrition && (
               <TextInput
                 placeholder="Describe any visible signs of malnutrition"
-                style={[styles.input, styles.textArea]}
+                style={[themedStyles.input, themedStyles.textArea]}
                 value={formData.malnutritionSigns}
                 onChangeText={(text) => handleChange('malnutritionSigns', text)}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
+                placeholderTextColor={theme.secondaryText}
               />
             )}
             {formData.skipMalnutrition && (
-              <View style={styles.skippedField}>
-                <Text style={styles.skippedText}>N/A</Text>
+              <View style={themedStyles.skippedField}>
+                <Text style={themedStyles.skippedText}>N/A</Text>
               </View>
             )}
           </View>
           
           {/* Recent Illnesses */}
-          <View style={styles.inputContainer}>
-            <View style={styles.skipContainerRight}>
-              <Text style={styles.skipText}>Skip Recent Illnesses</Text>
+          <View style={themedStyles.inputContainer}>
+            <View style={themedStyles.skipContainerRight}>
+              <Text style={themedStyles.skipText}>Skip Recent Illnesses</Text>
               <Switch
                 value={formData.skipIllnesses}
                 onValueChange={(value) => {
                   handleChange('skipIllnesses', value);
                   if (value) handleChange('recentIllnesses', 'N/A');
                 }}
+                trackColor={{ false: '#CCCCCC', true: theme.primary }}
+                thumbColor={formData.skipIllnesses ? theme.whiteText : '#999999'}
               />
             </View>
             {!formData.skipIllnesses && (
               <TextInput
                 placeholder="Describe any recent illnesses or health issues"
-                style={[styles.input, styles.textArea]}
+                style={[themedStyles.input, themedStyles.textArea]}
                 value={formData.recentIllnesses}
                 onChangeText={(text) => handleChange('recentIllnesses', text)}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
+                placeholderTextColor={theme.secondaryText}
               />
             )}
             {formData.skipIllnesses && (
-              <View style={styles.skippedField}>
-                <Text style={styles.skippedText}>N/A</Text>
+              <View style={themedStyles.skippedField}>
+                <Text style={themedStyles.skippedText}>N/A</Text>
               </View>
             )}
           </View>
           
           {/* Consent Checkbox */}
           <TouchableOpacity
-            style={styles.consentContainer}
+            style={themedStyles.consentContainer}
             onPress={() => handleChange('parentsConsent', !formData.parentsConsent)}
           >
-            <View style={[styles.checkbox, formData.parentsConsent && styles.checkboxChecked]}>
-              {formData.parentsConsent && <Text style={styles.checkmark}>✓</Text>}
+            <View style={[themedStyles.checkbox, formData.parentsConsent && themedStyles.checkboxChecked]}>
+              {formData.parentsConsent && <Text style={themedStyles.checkmark}>✓</Text>}
             </View>
-            <Text style={styles.consentText}>
+            <Text style={themedStyles.consentText}>
               I give my consent for my child's information to be registered and used for health monitoring purposes.
             </Text>
           </TouchableOpacity>
           
-          <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                  <Text style={styles.backButtonText}>← Back</Text>
+          <View style={themedStyles.buttonRow}>
+                <TouchableOpacity style={themedStyles.backButton} onPress={handleBack}>
+                  <Text style={themedStyles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
-                  <Text style={styles.nextButtonText}>Review →</Text>
+                <TouchableOpacity style={themedStyles.nextButton} onPress={handleNext}>
+                  <Text style={themedStyles.nextButtonText}>Review →</Text>
                 </TouchableOpacity>
               </View>
         </>
@@ -832,24 +902,24 @@ const handleSubmit = async () => {
 
       {step === 3 && (
         <>
-          <Text style={styles.heading}>Overview</Text>
+          <Text style={themedStyles.heading}>Overview</Text>
           {reviewEntries.map(([key, value]) => (
-            <Text key={key} style={styles.overviewText}>{key}: {String(value)}</Text>
+            <Text key={key} style={themedStyles.overviewText}>{key}: {String(value)}</Text>
           ))}
-          {formData.childImage && <Image source={{ uri: formData.childImage }} style={styles.childImagePreviewLarge} />}
-          <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                  <Text style={styles.backButtonText}>← Back</Text>
+          {formData.childImage && <Image source={{ uri: formData.childImage }} style={themedStyles.childImagePreviewLarge} />}
+          <View style={themedStyles.buttonRow}>
+                <TouchableOpacity style={themedStyles.backButton} onPress={handleBack}>
+                  <Text style={themedStyles.backButtonText}>← Back</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
-                    styles.submitButton,
-                    (!formData.parentsConsent || isSaving || hasSubmitted) && styles.submitButtonDisabled
+                    themedStyles.submitButton,
+                    (!formData.parentsConsent || isSaving || hasSubmitted) && themedStyles.submitButtonDisabled
                   ]}
                   onPress={handleSubmit}
                   disabled={!formData.parentsConsent || isSaving || hasSubmitted}
                 >
-                  <Text style={styles.submitButtonText}>
+                  <Text style={themedStyles.submitButtonText}>
                     {hasSubmitted ? 'Already Submitted' : (isSaving ? 'Submitting...' : 'Submit Registration')}
                   </Text>
                 </TouchableOpacity>
@@ -858,83 +928,137 @@ const handleSubmit = async () => {
       )}
 
       {step === 4 && (
-        <View style={styles.successBox}>
-          <Text style={styles.successText}>✅ SUCCESS</Text>
-          <Text style={styles.overviewText}>Registration completed successfully!</Text>
+        <View style={themedStyles.successBox}>
+          <Text style={themedStyles.successText}>✅ SUCCESS</Text>
+          <Text style={themedStyles.overviewText}>Registration completed successfully!</Text>
           
           {/* Health ID Display */}
-          <View style={styles.healthIdContainer}>
-            <Text style={styles.healthIdLabel}>Health ID:</Text>
-            <Text style={styles.healthIdText}>{formData.healthId}</Text>
-            <Text style={styles.healthIdNote}>Please save this ID for future reference</Text>
+          <View style={themedStyles.healthIdContainer}>
+            <Text style={themedStyles.healthIdLabel}>Health ID:</Text>
+            <Text style={themedStyles.healthIdText}>{formData.healthId}</Text>
+            <Text style={themedStyles.healthIdNote}>Please save this ID for future reference</Text>
           </View>
           
-          <View style={styles.successActions}>
+          <View style={themedStyles.successActions}>
             <TouchableOpacity
-              style={styles.shareHealthIdButton}
+              style={themedStyles.shareHealthIdButton}
               onPress={() => shareHealthId(formData.healthId)}
             >
-              <Text style={styles.shareHealthIdButtonText}>📤 Share Health ID</Text>
+              <Text style={themedStyles.shareHealthIdButtonText}>📤 Share Health ID</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={styles.dataExportButton}
+              style={themedStyles.dataExportButton}
               onPress={() => navigation.navigate('DataExport', { userData: formData })}
             >
-              <Text style={styles.dataExportButtonText}>📊 Export/Share Data</Text>
+              <Text style={themedStyles.dataExportButtonText}>📊 Export/Share Data</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={styles.continueButton}
+              style={themedStyles.continueButton}
               onPress={() => {
                 resetForm();
                 setStep(1);
               }}
             >
-              <Text style={styles.continueButtonText}>Register Another Child</Text>
+              <Text style={themedStyles.continueButtonText}>Register Another Child</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.continueButton, { backgroundColor: '#666', marginTop: 8 }]}
+              style={[themedStyles.continueButton, { backgroundColor: theme.secondaryText, marginTop: 8 }]}
               onPress={() => navigation.navigate('Home')}
             >
-              <Text style={styles.continueButtonText}>Back to Home</Text>
+              <Text style={themedStyles.continueButtonText}>Back to Home</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
-    </ScrollView>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+const createThemedStyles = (theme, insets) => StyleSheet.create({
+  // Main Container
+  mainContainer: {
+    flex: 1,
+    backgroundColor: theme.backgroundColor,
+    paddingTop: insets.top,
+  },
+  // Header Styles
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: theme.headerBackground,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  headerSpacer: {
+    flex: 1,
+  },
+  profileButton: {
+    padding: 5,
+  },
+  profileCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileContainer: {
+    position: 'relative',
+  },
+  connectivityDot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    bottom: 0,
+    right: 0,
+    borderWidth: 2,
+    borderColor: theme.headerBackground,
+  },
+  // Main Content Styles
+  mainContent: {
+    flex: 1,
+    backgroundColor: theme.cardBackground,
+  },
   container: {
     padding: 24,
-    backgroundColor: '#fff',
+    backgroundColor: theme.backgroundColor,
     flexGrow: 1,
     justifyContent: 'center',
+    paddingTop: 0, // Remove top padding since we have header now
   },
   heading: {
     fontSize: 22,
-    color: 'orange',
+    color: theme.primary,
     marginBottom: 20,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   healthWorkerInfo: {
     fontSize: 14,
-    color: '#666',
+    color: theme.secondaryText,
     marginBottom: 15,
     textAlign: 'center',
     fontStyle: 'italic',
   },
   input: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.isDarkMode ? '#2A2A2A' : '#cbc0c033',
     marginBottom: 16,
     padding: 12,
     borderRadius: 8,
-    borderColor: '#888',
+    borderColor: theme.border,
     borderWidth: 1,
+    color: theme.primaryText,
+    fontSize: 16,
   },
   nameRow: {
     flexDirection: 'row',
@@ -956,17 +1080,17 @@ const styles = StyleSheet.create({
   unitPicker: {
     bottom: 8.75,
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.isDarkMode ? '#2A2A2A' : '#cbc0c033',
     padding: 12,
     borderRadius: 8,
-    borderColor: '#888',
+    borderColor: theme.border,
     borderWidth: 1,
+    color: theme.primaryText,
   },
   imageUploadBox: {
     color: 'green',
     marginBottom: 20,
     alignItems: 'center',
-
   },
   childImagePreview: {
     width: 100,
@@ -986,68 +1110,65 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   overviewText: {
-    color: '#222',
+    color: theme.primaryText,
     marginBottom: 8,
     fontSize: 14,
   },
   successBox: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#76f776ff',
+    backgroundColor: theme.success,
     borderRadius: 10,
   },
   successText: {
     fontSize: 20,
-    color: 'lime',
+    color: theme.whiteText,
     marginBottom: 12,
   },
   phoneRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-
   countryPicker: {
     marginRight: 10,
     marginBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.isDarkMode ? '#2A2A2A' : '#cbc0c033',
     padding: 12,
     borderRadius: 8,
-    borderColor: '#888',
+    borderColor: theme.border,
     borderWidth: 1,
+    color: theme.primaryText,
   },
-
   errorText: {
-    color: 'red',
+    color: theme.error,
     fontSize: 12,
     marginBottom: 8,
     marginLeft: 5,
   },
-    nextButton: {
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 12,
-      backgroundColor: '#4A7C59',
-      shadowColor: '#4A7C59',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 4,
+  nextButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-    
   checkboxChecked: {
-    backgroundColor: '#4A7C59',
-    borderColor: '#4A7C59',
+    borderColor: theme.primary,
   },
   checkmark: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 12,
     fontWeight: 'bold',
   },
   consentText: {
     flex: 1,
     fontSize: 14,
-    color: '#2D5016',
+    color: theme.primaryText,
     lineHeight: 20,
   },
   buttonRow: {
@@ -1060,11 +1181,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#4A7C59',
-    backgroundColor: '#FFFFFF',
+    borderColor: theme.primary,
+    backgroundColor: theme.cardBackground,
   },
   backButtonText: {
-    color: '#4A7C59',
+    color: theme.primary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1072,53 +1193,53 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#4A7C59',
-    shadowColor: '#4A7C59',
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   submitButtonDisabled: {
-    backgroundColor: '#C4E5C4',
+    backgroundColor: 'grey',
     shadowOpacity: 0,
     elevation: 0,
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
   },
   nextButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
-    },
+    color: theme.whiteText,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   checkbox: {
-      width: 20,
-      height: 20,
-      borderWidth: 2,
-      borderColor: '#C4E5C4',
-      borderRadius: 4,
-      marginRight: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: '#FFFFFF',
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: 'light-blue',
+    borderRadius: 4,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.cardBackground,
   },
   uploadButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#4A7C59',
-    shadowColor: '#4A7C59',
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   uploadButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -1132,7 +1253,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D5016',
+    color: theme.primary,
     marginBottom: 8,
   },
   consentContainer: {
@@ -1148,16 +1269,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#FF9500',
+    backgroundColor: theme.accent,
     marginBottom: 12,
-    shadowColor: '#FF9500',
+    shadowColor: theme.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   dataExportButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -1166,15 +1287,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#4A7C59',
-    shadowColor: '#4A7C59',
+    backgroundColor: theme.primary,
+    shadowColor: theme.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   continueButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',
@@ -1188,7 +1309,7 @@ const styles = StyleSheet.create({
   skipText: {
     marginLeft: 12,
     fontSize: 16,
-    color: '#2D5016',
+    color: theme.primaryText,
     fontWeight: '500',
   },
   skipContainerRight: {
@@ -1204,48 +1325,48 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: theme.error,
     borderWidth: 2,
   },
   skippedField: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.backgroundColor,
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: theme.border,
   },
   skippedText: {
-    color: '#888',
+    color: theme.secondaryText,
     fontSize: 14,
     fontStyle: 'italic',
   },
   healthIdContainer: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: theme.primaryLight,
     padding: 16,
     borderRadius: 12,
     marginVertical: 16,
     borderWidth: 2,
-    borderColor: '#4A7C59',
+    borderColor: theme.primary,
     alignItems: 'center',
   },
   healthIdLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2D5016',
+    color: theme.primary,
     marginBottom: 8,
   },
   healthIdText: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#4A7C59',
+    color: theme.primary,
     marginBottom: 8,
     letterSpacing: 1,
     textAlign: 'center',
   },
   healthIdNote: {
     fontSize: 12,
-    color: '#666',
+    color: theme.secondaryText,
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -1253,16 +1374,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.info,
     marginBottom: 12,
-    shadowColor: '#007AFF',
+    shadowColor: theme.info,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
   shareHealthIdButtonText: {
-    color: '#FFFFFF',
+    color: theme.whiteText,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'center',

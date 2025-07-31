@@ -46,7 +46,7 @@ export default function ESignetAuthScreen({ navigation, route }) {
     // Remove all non-digits
     const cleaned = text.replace(/\D/g, '');
     // Add spaces every 4 digits for better readability
-    const formatted = cleaned.replace(/(\d{4})(\d{4})(\d{2})/, '$1 $2 $3');
+    const formatted = cleaned.replace(/(\d{5})(\d{5})/, '$1 $2');
     return formatted.substring(0, 12); // Limit to 10 digits + 2 spaces
   };
 
@@ -197,11 +197,11 @@ export default function ESignetAuthScreen({ navigation, route }) {
             <Text style={styles.inputLabel}>MOSIP UIN Number</Text>
             <TextInput
               style={styles.input}
-              placeholder="XXXX XXXX XX"
+              placeholder="XXXXX XXXXX"
               value={uinNumber}
               onChangeText={(text) => setUinNumber(formatUIN(text))}
               keyboardType="numeric"
-              maxLength={12}
+              maxLength={11}
               autoFocus
             />
           </View>
