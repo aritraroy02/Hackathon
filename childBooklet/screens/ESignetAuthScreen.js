@@ -115,7 +115,16 @@ export default function ESignetAuthScreen({ navigation, route }) {
       if (!response.success || !response.data?.accessToken) {
         throw new Error(response.error || 'OTP verification failed.');
       }
-      await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(response.data));
+      
+      // Add authentication timestamp and session info
+      const authDataWithTimestamp = {
+        ...response.data,
+        authenticatedAt: new Date().toISOString(),
+        sessionDuration: 30, // 30 minutes
+        isAuthenticated: true
+      };
+      
+      await AsyncStorage.setItem('eSignetAuthData', JSON.stringify(authDataWithTimestamp));
       await AsyncStorage.setItem('userProfile', JSON.stringify(response.data.userData));
       Alert.alert(
         'Authentication Successful',

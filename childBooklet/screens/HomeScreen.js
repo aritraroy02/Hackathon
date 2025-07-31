@@ -39,10 +39,48 @@ export default function HomeScreen({ navigation, route }) {
   const [pendingRecords, setPendingRecords] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [greetingMessage, setGreetingMessage] = useState('Good Morning, User');
-  const username = route.params?.username || 'Health Worker';
-  console.log('HomeScreen - Username from route:', username);
+  const [authenticatedUsername, setAuthenticatedUsername] = useState(null);
+  const [isLoadingUsername, setIsLoadingUsername] = useState(true);
   const slideAnim = useState(new Animated.Value(-300))[0];
   const overlayOpacity = useState(new Animated.Value(0))[0];
+
+  // Load authenticated username
+  useEffect(() => {
+    loadAuthenticatedUsername();
+  }, []);
+
+  // Log username only when it changes
+  useEffect(() => {
+    if (isLoadingUsername) {
+      console.log('HomeScreen - Authenticated username: Loading...');
+    } else {
+      console.log('HomeScreen - Authenticated username:', authenticatedUsername || 'Not found');
+    }
+  }, [authenticatedUsername, isLoadingUsername]);
+
+  const loadAuthenticatedUsername = async () => {
+    setIsLoadingUsername(true);
+    try {
+      const authData = await AsyncStorage.getItem('eSignetAuthData');
+      if (authData) {
+        const parsedAuth = JSON.parse(authData);
+        if (parsedAuth.isAuthenticated && parsedAuth.userData?.name) {
+          setAuthenticatedUsername(parsedAuth.userData.name);
+        } else if (parsedAuth.isAuthenticated && parsedAuth.username) {
+          setAuthenticatedUsername(parsedAuth.username);
+        } else {
+          setAuthenticatedUsername('Field Representative');
+        }
+      } else {
+        setAuthenticatedUsername('Field Representative');
+      }
+    } catch (error) {
+      console.error('Error loading authenticated username:', error);
+      setAuthenticatedUsername('Field Representative');
+    } finally {
+      setIsLoadingUsername(false);
+    }
+  };
 
   // Check internet connectivity
   useEffect(() => {
@@ -89,10 +127,13 @@ export default function HomeScreen({ navigation, route }) {
   useEffect(() => {
     loadPendingRecords();
     loadGreetingMessage();
+    loadAuthenticatedUsername(); // Also reload username on focus
+    
     // Set up focus listener to reload pending records when screen comes into focus
     const unsubscribe = navigation.addListener('focus', () => {
       loadPendingRecords();
       loadGreetingMessage();
+      loadAuthenticatedUsername(); // Reload username when screen gains focus
     });
     return unsubscribe;
   }, [navigation]);
@@ -107,10 +148,21 @@ export default function HomeScreen({ navigation, route }) {
       const stored = await AsyncStorage.getItem('pendingChildRecords');
       if (stored) {
         const records = JSON.parse(stored);
-        setPendingRecords(records);
-        console.log('Loaded pending records:', records.length);
+        setPendingRecords(prevRecords => {
+          // Only log if the count actually changed
+          if (prevRecords.length !== records.length) {
+            console.log('Loaded pending records:', records.length);
+          }
+          return records;
+        });
       } else {
-        setPendingRecords([]);
+        setPendingRecords(prevRecords => {
+          // Only log if we had records before
+          if (prevRecords.length > 0) {
+            console.log('Loaded pending records: 0');
+          }
+          return [];
+        });
       }
     } catch (error) {
       console.error('Error loading pending records:', error);
@@ -206,7 +258,29 @@ export default function HomeScreen({ navigation, route }) {
       const authData = await AsyncStorage.getItem('eSignetAuthData');
       if (authData) {
         const parsedAuth = JSON.parse(authData);
-        return parsedAuth.isAuthenticated;
+        
+        // Check if user is authenticated and has required data
+        const isValidAuth = parsedAuth.isAuthenticated && 
+                           parsedAuth.accessToken && 
+                           parsedAuth.userData && 
+                           parsedAuth.authenticatedAt;
+        
+        if (isValidAuth) {
+          // Check if session is still valid (30 minutes)
+          const authTime = new Date(parsedAuth.authenticatedAt);
+          const currentTime = new Date();
+          const sessionDuration = (currentTime - authTime) / (1000 * 60); // minutes
+          
+          if (sessionDuration > 30) {
+            // Session expired, clear auth data
+            await AsyncStorage.removeItem('eSignetAuthData');
+            await AsyncStorage.removeItem('userProfile');
+            console.log('Session expired, cleared auth data');
+            return false;
+          }
+          
+          return true;
+        }
       }
       return false;
     } catch (error) {
@@ -233,7 +307,9 @@ export default function HomeScreen({ navigation, route }) {
       const authData = await AsyncStorage.getItem('eSignetAuthData');
       if (authData) {
         const parsedAuth = JSON.parse(authData);
-        if (parsedAuth.isAuthenticated && parsedAuth.username) {
+        if (parsedAuth.isAuthenticated && parsedAuth.userData?.name) {
+          return `${getTimeBasedGreeting()}, ${parsedAuth.userData.name}`;
+        } else if (parsedAuth.isAuthenticated && parsedAuth.username) {
           return `${getTimeBasedGreeting()}, ${parsedAuth.username}`;
         }
       }
@@ -264,7 +340,7 @@ export default function HomeScreen({ navigation, route }) {
     if (!isAuthenticated) {
       Alert.alert(
         'Authentication Required',
-        'You must authenticate with Mock MOSIP ID before uploading data.',
+        'Your session has expired or you need to authenticate with Mock MOSIP ID before uploading data. Session expires after 30 minutes for security.',
         [
           { text: 'Cancel', style: 'cancel' },
           {
@@ -282,18 +358,26 @@ export default function HomeScreen({ navigation, route }) {
       console.log('Uploading pending records:', pendingRecords);
       
       // Get authenticated username for upload
-      let uploadUsername = 'healthworker'; // default fallback
+      let uploadUsername = 'fieldrepresentative'; // default fallback
       try {
         const authData = await AsyncStorage.getItem('eSignetAuthData');
         console.log('Upload - Retrieved auth data:', authData);
         if (authData) {
           const parsedAuth = JSON.parse(authData);
           console.log('Upload - Parsed auth data:', parsedAuth);
-          if (parsedAuth.isAuthenticated && parsedAuth.username) {
-            uploadUsername = parsedAuth.username;
-            console.log('Upload - Using authenticated username:', uploadUsername);
+          if (parsedAuth.isAuthenticated) {
+            // Check for username in userData.name first, then username field
+            if (parsedAuth.userData?.name) {
+              uploadUsername = parsedAuth.userData.name;
+              console.log('Upload - Using authenticated username from userData.name:', uploadUsername);
+            } else if (parsedAuth.username) {
+              uploadUsername = parsedAuth.username;
+              console.log('Upload - Using authenticated username from username field:', uploadUsername);
+            } else {
+              console.log('Upload - Auth data exists but no username found');
+            }
           } else {
-            console.log('Upload - Auth data exists but user not authenticated or no username');
+            console.log('Upload - Auth data exists but user not authenticated');
           }
         } else {
           console.log('Upload - No auth data found in AsyncStorage');
@@ -497,13 +581,23 @@ export default function HomeScreen({ navigation, route }) {
       {/* Bottom Tab Bar */}
       <View style={themedStyles.bottomTabBar}>
         <TouchableOpacity style={themedStyles.tabItem} onPress={() => {
-          console.log('HomeScreen - Navigating to Signup with username:', username);
-          navigation.navigate('Signup', { username: username });
+          if (isLoadingUsername) {
+            // Don't navigate while username is loading
+            return;
+          }
+          console.log('HomeScreen - Navigating to Signup with username:', authenticatedUsername);
+          navigation.navigate('Signup', { username: authenticatedUsername });
         }}>
           <View style={themedStyles.tabIconContainer}>
-            <Ionicons name="person-add" size={18} color={theme.primary} />
+            {isLoadingUsername ? (
+              <Ionicons name="sync" size={18} color={theme.primary} />
+            ) : (
+              <Ionicons name="person-add" size={18} color={theme.primary} />
+            )}
           </View>
-          <Text style={themedStyles.tabLabel}>Register</Text>
+          <Text style={themedStyles.tabLabel}>
+            {isLoadingUsername ? 'Loading...' : 'Register'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={themedStyles.tabItem} onPress={() => navigation.navigate('ViewRecords')}>

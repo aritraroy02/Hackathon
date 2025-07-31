@@ -21,6 +21,7 @@ export default function ProfileScreen({ navigation }) {
   const [authData, setAuthData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
+  const [sessionTimeRemaining, setSessionTimeRemaining] = useState(null);
 
   const themedStyles = createThemedStyles(theme, insets);
 
@@ -35,6 +36,61 @@ export default function ProfileScreen({ navigation }) {
     });
     return unsubscribe;
   }, [navigation]);
+
+  // Session timeout timer effect with real-time countdown
+  useEffect(() => {
+    let sessionTimer;
+    
+    if (authData && authData.authenticatedAt) {
+      const updateSessionTimer = () => {
+        const authTime = new Date(authData.authenticatedAt);
+        const currentTime = new Date();
+        const sessionDuration = (currentTime - authTime) / (1000 * 60); // minutes
+        const remainingTime = Math.max(0, 30 - sessionDuration);
+        
+        setSessionTimeRemaining(remainingTime);
+        
+        if (sessionDuration >= 30) {
+          // Session expired - auto logout
+          handleAutoLogout();
+        }
+      };
+      
+      // Check immediately
+      updateSessionTimer();
+      
+      // Set up timer to check every second for real-time countdown
+      sessionTimer = setInterval(updateSessionTimer, 1000);
+    }
+    
+    return () => {
+      if (sessionTimer) {
+        clearInterval(sessionTimer);
+      }
+    };
+  }, [authData]);
+
+  const handleAutoLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('eSignetAuthData');
+      await AsyncStorage.removeItem('userProfile');
+      
+      Alert.alert(
+        'Session Expired',
+        'Your session has expired after 30 minutes for security reasons. Please authenticate again to continue.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Home')
+          }
+        ],
+        { cancelable: false }
+      );
+    } catch (error) {
+      console.error('Error during auto logout:', error);
+      navigation.navigate('Home');
+    }
+  };
 
   const checkNetworkStatus = async () => {
     try {
@@ -258,6 +314,70 @@ export default function ProfileScreen({ navigation }) {
             <Text style={themedStyles.statusSubtext}>
               Authenticated on: {new Date(authData.authenticatedAt).toLocaleDateString()} at {new Date(authData.authenticatedAt).toLocaleTimeString()}
             </Text>
+            
+            {/* Countdown Timer Section */}
+            {sessionTimeRemaining !== null && (
+              <View style={themedStyles.sessionTimerContainer}>
+                <View style={themedStyles.sessionTimerHeader}>
+                  <Ionicons 
+                    name="timer-outline" 
+                    size={18} 
+                    color={sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50'} 
+                  />
+                  <Text style={[
+                    themedStyles.sessionTimerTitle,
+                    { color: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50' }
+                  ]}>
+                    Session Timer
+                  </Text>
+                </View>
+                
+                {/* Visual Progress Bar */}
+                <View style={themedStyles.progressBarContainer}>
+                  <View style={themedStyles.progressBarBackground}>
+                    <View 
+                      style={[
+                        themedStyles.progressBarFill,
+                        {
+                          width: `${(sessionTimeRemaining / 30) * 100}%`,
+                          backgroundColor: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50'
+                        }
+                      ]}
+                    />
+                  </View>
+                </View>
+                
+                {/* Digital Countdown Display */}
+                <View style={themedStyles.countdownDisplay}>
+                  <Text style={[
+                    themedStyles.countdownTime,
+                    { color: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50' }
+                  ]}>
+                    {Math.floor(sessionTimeRemaining)}:{String(Math.floor((sessionTimeRemaining % 1) * 60)).padStart(2, '0')}
+                  </Text>
+                  <Text style={themedStyles.countdownLabel}>minutes remaining</Text>
+                </View>
+                
+                {/* Warning Messages */}
+                {sessionTimeRemaining <= 5 && sessionTimeRemaining > 0 && (
+                  <View style={themedStyles.warningContainer}>
+                    <Ionicons name="warning" size={16} color="#FF3B30" />
+                    <Text style={themedStyles.warningText}>
+                      Session expiring soon! Save your work.
+                    </Text>
+                  </View>
+                )}
+                
+                {sessionTimeRemaining <= 1 && sessionTimeRemaining > 0 && (
+                  <View style={themedStyles.criticalWarningContainer}>
+                    <Ionicons name="alert-circle" size={16} color="#FF3B30" />
+                    <Text style={themedStyles.criticalWarningText}>
+                      Auto-logout in less than 1 minute!
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
           </View>
         </View>
 
@@ -548,5 +668,95 @@ const createThemedStyles = (theme, insets) => StyleSheet.create({
     fontSize: 12,
     color: theme.lightText,
     textAlign: 'center',
+  },
+  sessionInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  sessionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  // Countdown Timer Styles
+  sessionTimerContainer: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  sessionTimerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sessionTimerTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  progressBarContainer: {
+    marginBottom: 12,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    transition: 'width 0.3s ease',
+  },
+  countdownDisplay: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  countdownTime: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    fontFamily: 'monospace',
+  },
+  countdownLabel: {
+    fontSize: 12,
+    color: theme.secondaryText,
+    marginTop: 2,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF2F2',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  warningText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+    flex: 1,
+  },
+  criticalWarningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFE6E6',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
+  },
+  criticalWarningText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 6,
+    flex: 1,
   },
 });

@@ -36,9 +36,11 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
-console.log('API Base URL:', API_BASE_URL);
-console.log('Production mode:', isProduction);
-console.log('Running on Expo Go:', Constants.appOwnership === 'expo');
+
+// Development logs (commented out for production)
+// console.log('API Base URL:', API_BASE_URL);
+// console.log('Production mode:', isProduction);
+// console.log('Running on Expo Go:', Constants.appOwnership === 'expo');
 
 export const API_ENDPOINTS = {
   CHILDREN: `${API_BASE_URL}/children`,
