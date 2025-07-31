@@ -44,7 +44,7 @@ export default function SignupScreen({ navigation, route }) {
   const [locationError, setLocationError] = useState('');
   
   // Get username from route parameters (health worker who is registering)
-  const healthWorkerUsername = route?.params?.username || 'Unknown Health Worker';
+  const healthWorkerUsername = route?.params?.username || 'Field Representative';
   
   // Debug logging
   console.log('SignupScreen - Route params:', route?.params);

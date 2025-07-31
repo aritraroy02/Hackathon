@@ -26,8 +26,8 @@ const childSchema = new mongoose.Schema({
   isOffline: { type: Boolean, default: false },
   
   // Health worker information
-  healthWorkerUsername: { type: String },
-  registeredBy: { type: String },
+  healthWorkerUsername: { type: String, default: 'fieldrepresentative' },
+  registeredBy: { type: String, default: 'Field Representative' },
   
   // Location data (captured when data is uploaded)
   location: {
