@@ -111,10 +111,6 @@ export default function ViewRecordsScreen({ navigation }) {
             <Text style={themedStyles.detailValue}>{record.guardianName}</Text>
           </View>
           <View style={themedStyles.detailRow}>
-            <Text style={themedStyles.detailLabel}>Registered By:</Text>
-            <Text style={themedStyles.detailValue}>{record.healthWorkerUsername}</Text>
-          </View>
-          <View style={themedStyles.detailRow}>
             <Text style={themedStyles.detailLabel}>Date:</Text>
             <Text style={themedStyles.detailValue}>
               {new Date(record.dateCollected).toLocaleDateString()}

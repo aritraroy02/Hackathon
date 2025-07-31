@@ -386,14 +386,8 @@ export default function HomeScreen({ navigation, route }) {
         console.error('Error getting auth username for upload:', authError);
       }
       
-      // Add healthWorkerUsername field to all records (matches backend schema)
-      const recordsWithUploader = pendingRecords.map(record => ({
-        ...record,
-        healthWorkerUsername: uploadUsername
-      }));
-      
       // Use bulk upload endpoint to upload all pending records at once
-      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', recordsWithUploader);
+      const response = await makeRequest(API_ENDPOINTS.BULK_UPLOAD, 'POST', pendingRecords);
       
       console.log('Bulk upload response:', response);
       

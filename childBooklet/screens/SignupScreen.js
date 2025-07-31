@@ -42,13 +42,6 @@ export default function SignupScreen({ navigation, route }) {
   const [customRelation, setCustomRelation] = useState('');
   const [currentLocation, setCurrentLocation] = useState(null);
   const [locationError, setLocationError] = useState('');
-  
-  // Get username from route parameters (health worker who is registering)
-  const healthWorkerUsername = route?.params?.username || 'Field Representative';
-  
-  // Debug logging
-  console.log('SignupScreen - Route params:', route?.params);
-  console.log('SignupScreen - Health worker username:', healthWorkerUsername);
 
   const [formData, setFormData] = useState({
     childName: '',
@@ -367,8 +360,6 @@ const handleSubmit = async () => {
         dateCollected: new Date().toISOString(),
         isOffline: true, // Always mark as offline/pending
         location: locationData, // Add location data to the record
-        healthWorkerUsername: healthWorkerUsername, // Add health worker username
-        registeredBy: healthWorkerUsername, // Alternative field name for clarity
         isPending: true, // Mark as pending for upload
       };
       
@@ -507,7 +498,6 @@ const handleSubmit = async () => {
       {step === 1 && (
         <>
           <Text style={styles.heading}>Step 1: Child Info</Text>
-          <Text style={styles.healthWorkerInfo}>Registered by: {healthWorkerUsername}</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Child's Full Name</Text>

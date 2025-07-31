@@ -22,6 +22,7 @@ export default function ProfileScreen({ navigation }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
   const [sessionTimeRemaining, setSessionTimeRemaining] = useState(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const themedStyles = createThemedStyles(theme, insets);
 
@@ -41,18 +42,29 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     let sessionTimer;
     
-    if (authData && authData.authenticatedAt) {
+    if (authData && authData.authenticatedAt && !isLoggingOut) {
       const updateSessionTimer = () => {
+        // If logout process has started, stop the timer
+        if (isLoggingOut) {
+          if (sessionTimer) {
+            clearInterval(sessionTimer);
+          }
+          return;
+        }
+        
         const authTime = new Date(authData.authenticatedAt);
         const currentTime = new Date();
-        const sessionDuration = (currentTime - authTime) / (1000 * 60); // minutes
-        const remainingTime = Math.max(0, 30 - sessionDuration);
+        const sessionDuration = (currentTime - authTime) / 1000; // seconds
+        const remainingTime = Math.max(0, 1800 - sessionDuration); // 30 minutes
         
         setSessionTimeRemaining(remainingTime);
         
-        if (sessionDuration >= 30) {
-          // Session expired - auto logout
-          handleAutoLogout();
+        if (sessionDuration >= 1800) { // 30 minutes
+          // Session expired - auto logout (only if not already logging out)
+          if (!isLoggingOut) {
+            clearInterval(sessionTimer); // Clear timer immediately
+            handleAutoLogout();
+          }
         }
       };
       
@@ -68,9 +80,16 @@ export default function ProfileScreen({ navigation }) {
         clearInterval(sessionTimer);
       }
     };
-  }, [authData]);
+  }, [authData, isLoggingOut]);
 
   const handleAutoLogout = async () => {
+    // Prevent multiple logout attempts
+    if (isLoggingOut) {
+      return;
+    }
+    
+    setIsLoggingOut(true);
+    
     try {
       await AsyncStorage.removeItem('eSignetAuthData');
       await AsyncStorage.removeItem('userProfile');
@@ -322,11 +341,11 @@ export default function ProfileScreen({ navigation }) {
                   <Ionicons 
                     name="timer-outline" 
                     size={18} 
-                    color={sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50'} 
+                    color={sessionTimeRemaining <= 300 ? '#FF3B30' : sessionTimeRemaining <= 600 ? '#FF9500' : '#4CAF50'} 
                   />
                   <Text style={[
                     themedStyles.sessionTimerTitle,
-                    { color: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50' }
+                    { color: sessionTimeRemaining <= 300 ? '#FF3B30' : sessionTimeRemaining <= 600 ? '#FF9500' : '#4CAF50' }
                   ]}>
                     Session Timer
                   </Text>
@@ -339,8 +358,8 @@ export default function ProfileScreen({ navigation }) {
                       style={[
                         themedStyles.progressBarFill,
                         {
-                          width: `${(sessionTimeRemaining / 30) * 100}%`,
-                          backgroundColor: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50'
+                          width: `${(sessionTimeRemaining / 1800) * 100}%`, // 30 minutes
+                          backgroundColor: sessionTimeRemaining <= 300 ? '#FF3B30' : sessionTimeRemaining <= 600 ? '#FF9500' : '#4CAF50'
                         }
                       ]}
                     />
@@ -351,15 +370,15 @@ export default function ProfileScreen({ navigation }) {
                 <View style={themedStyles.countdownDisplay}>
                   <Text style={[
                     themedStyles.countdownTime,
-                    { color: sessionTimeRemaining <= 5 ? '#FF3B30' : sessionTimeRemaining <= 10 ? '#FF9500' : '#4CAF50' }
+                    { color: sessionTimeRemaining <= 300 ? '#FF3B30' : sessionTimeRemaining <= 600 ? '#FF9500' : '#4CAF50' }
                   ]}>
-                    {Math.floor(sessionTimeRemaining)}:{String(Math.floor((sessionTimeRemaining % 1) * 60)).padStart(2, '0')}
+                    {Math.floor(sessionTimeRemaining / 60)}:{String(Math.floor(sessionTimeRemaining % 60)).padStart(2, '0')}
                   </Text>
                   <Text style={themedStyles.countdownLabel}>minutes remaining</Text>
                 </View>
                 
                 {/* Warning Messages */}
-                {sessionTimeRemaining <= 5 && sessionTimeRemaining > 0 && (
+                {sessionTimeRemaining <= 300 && sessionTimeRemaining > 0 && (
                   <View style={themedStyles.warningContainer}>
                     <Ionicons name="warning" size={16} color="#FF3B30" />
                     <Text style={themedStyles.warningText}>
@@ -368,7 +387,7 @@ export default function ProfileScreen({ navigation }) {
                   </View>
                 )}
                 
-                {sessionTimeRemaining <= 1 && sessionTimeRemaining > 0 && (
+                {sessionTimeRemaining <= 60 && sessionTimeRemaining > 0 && (
                   <View style={themedStyles.criticalWarningContainer}>
                     <Ionicons name="alert-circle" size={16} color="#FF3B30" />
                     <Text style={themedStyles.criticalWarningText}>

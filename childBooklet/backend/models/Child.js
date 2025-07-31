@@ -25,10 +25,6 @@ const childSchema = new mongoose.Schema({
   dateCollected: { type: Date, default: Date.now },
   isOffline: { type: Boolean, default: false },
   
-  // Health worker information
-  healthWorkerUsername: { type: String, default: 'fieldrepresentative' },
-  registeredBy: { type: String, default: 'Field Representative' },
-  
   // Location data (captured when data is uploaded)
   location: {
     latitude: { type: Number },
